@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/*
+  Palette: indigo ink on blue-grey paper. Cobalt is the signal (full-band
+  waveform, primary data); magenta is reserved for sub-bass everywhere it
+  appears, so the colour itself teaches what it means.
+*/
+:root {
+  --paper: #eef0f6;
+  --surface: #ffffff;
+  --ink: #16183a;
+  --muted: #5c6080;
+  --line: #d5d8e6;
+  --signal: #2944f0;
+  --sub: #c8176b;
+  --win: #13795b;
+  --loss: #b42318;
+  --wave-signal: var(--signal);
+  --wave-sub: var(--sub);
+  --wave-rest: #9ea3c0;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #13152b;
+    --surface: #1c1f3a;
+    --ink: #e8e9f6;
+    --muted: #9a9ec0;
+    --line: #2e3256;
+    --signal: #8ea0ff;
+    --sub: #ff5ca6;
+    --win: #4cc79a;
+    --loss: #ff8a7a;
+    --wave-rest: #4a4f78;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #13152b;
+  --surface: #1c1f3a;
+  --ink: #e8e9f6;
+  --muted: #9a9ec0;
+  --line: #2e3256;
+  --signal: #8ea0ff;
+  --sub: #ff5ca6;
+  --win: #4cc79a;
+  --loss: #ff8a7a;
+  --wave-rest: #4a4f78;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-signal: var(--signal);
+  --color-sub: var(--sub);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+/* Archivo's width axis does the typographic work: wide for identity, narrow for numbers. */
+.handle {
+  font-stretch: 125%;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.num {
+  font-stretch: 78%;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
