@@ -10,6 +10,7 @@ import WaveformPlayer from '@/components/audio/WaveformPlayer';
 import AudioRecorder from '@/components/audio/AudioRecorder';
 import Countdown from '@/components/Countdown';
 import LiveRoom from './LiveRoom';
+import ReportButton from '@/components/moderation/ReportButton';
 import { flagEmoji, hoursText, intervalHours, signed } from '@/lib/format';
 import type { BattleWithPlayers, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
 
@@ -368,6 +369,11 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
       )}
 
       {error && <p className="text-loss" role="alert">{error}</p>}
+      {!isParticipant && (
+        <div className="border-t border-line pt-4">
+          <ReportButton battleId={battle.id} signedIn={!!currentUserId} label="Report this battle" />
+        </div>
+      )}
     </article>
   );
 }

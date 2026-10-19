@@ -134,3 +134,55 @@ export interface ProfileBattle {
   elo_after: number | null;
   rn: number;
 }
+
+/** One row of leaderboard() / my_leaderboard_position(). */
+export interface LeaderboardRow {
+  rank: number;
+  profile_id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  country: string | null;
+  points: number;
+  battles: number;
+  wins: number;
+  elo_rating: number;
+}
+
+export interface Season {
+  id: number;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface ScoringRules {
+  win: number;
+  loss: number;
+  draw: number;
+  forfeit: number;
+  forfeit_win: number;
+}
+
+export type NotificationKind =
+  | 'challenge_received' | 'challenge_accepted' | 'challenge_declined'
+  | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  battle_id: string | null;
+  data: {
+    mode?: 'async' | 'live';
+    starts_at?: string | null;
+    deadline?: string | null;
+    ends_at?: string | null;
+    result?: string;
+    outcome?: 'W' | 'L' | 'D' | 'N';
+    forfeited_by_me?: boolean;
+    elo_delta?: number | null;
+  };
+  created_at: string;
+  read_at: string | null;
+  actor?: { username: string } | null;
+}

@@ -24,6 +24,7 @@ export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [country, setCountry] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup
         return;
       }
 
+      if (!agreed) throw new Error('Confirm your age and accept the terms to create an account.');
       if (!/^[A-Za-z0-9_.]{3,24}$/.test(username)) {
         throw new Error('Handles are 3 to 24 characters: letters, numbers, dots and underscores.');
       }
@@ -57,7 +59,7 @@ export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup
         email,
         password,
         options: {
-          data: { username, country: country || null },
+          data: { username, country: country || null, accepted_terms: 'true' },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
@@ -132,6 +134,15 @@ export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup
         />
         {mode === 'signup' && <span className="text-muted">At least 8 characters.</span>}
       </label>
+      {mode === 'signup' && (
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4 accent-[var(--signal)]" />
+          <span>
+            I’m 16 or older and I accept the <Link href="/terms" target="_blank" className="underline underline-offset-4">Terms of use</Link> and
+            the <Link href="/privacy" target="_blank" className="underline underline-offset-4">Privacy policy</Link>.
+          </span>
+        </label>
+      )}
       {error && <p role="alert" className="text-loss">{error}</p>}
       <button disabled={busy} className="rounded-full bg-ink px-5 py-3 text-paper disabled:opacity-60">
         {busy ? (mode === 'login' ? 'Logging in…' : 'Creating account…') : mode === 'login' ? 'Log in' : 'Create account'}

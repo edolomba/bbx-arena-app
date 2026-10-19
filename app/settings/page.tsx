@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/settings/ProfileForm';
+import DeleteAccount from '@/components/settings/DeleteAccount';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
         <p className="text-muted">@{profile.username}. Everything here is public.</p>
       </div>
       <ProfileForm initial={profile} />
+      <DeleteAccount username={profile.username} />
     </main>
   );
 }

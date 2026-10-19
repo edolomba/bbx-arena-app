@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-dvh antialiased">
         <Header />
         {children}
+        <Footer />
       </body>
     </html>
   );

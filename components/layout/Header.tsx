@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import NotificationBell from './NotificationBell';
 
 /** Site header. Server component: reads the session from cookies. */
 export default async function Header() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  let username: string | null = null;
+  let me: { username: string; is_admin: boolean; suspended_at: string | null } | null = null;
   if (user) {
-    const { data } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
-    username = data?.username ?? null;
+    const { data } = await supabase.from('profiles').select('username, is_admin, suspended_at').eq('id', user.id).maybeSingle();
+    me = data;
   }
 
   const link = 'rounded-full px-3 py-1.5 text-muted hover:text-ink';
@@ -21,6 +22,8 @@ export default async function Header() {
         <nav aria-label="Sections" className="flex min-w-0 gap-1 overflow-x-auto text-sm">
           <Link href="/battles" className={link}>Battles</Link>
           <Link href="/beatboxers" className={link}>Beatboxers</Link>
+          <Link href="/ranking" className={link}>Ranking</Link>
+          {me?.is_admin && <Link href="/admin" className={link}>Moderation</Link>}
         </nav>
         <div className="ml-auto flex items-center gap-2 text-sm">
           {user ? (
@@ -28,9 +31,8 @@ export default async function Header() {
               <Link href="/battles/new" className="hidden rounded-full bg-ink px-4 py-1.5 text-paper sm:inline-block">
                 Start a battle
               </Link>
-              {username && (
-                <Link href={`/beatboxers/${username}`} className={link}>@{username}</Link>
-              )}
+              <NotificationBell userId={user.id} />
+              {me && <Link href={`/beatboxers/${me.username}`} className={`${link} hidden sm:inline`}>@{me.username}</Link>}
               <form action="/auth/signout" method="post">
                 <button className={link}>Log out</button>
               </form>
@@ -43,6 +45,11 @@ export default async function Header() {
           )}
         </div>
       </div>
+      {me?.suspended_at && (
+        <p role="alert" className="bg-loss px-4 py-2 text-center text-sm text-paper">
+          Your account is suspended: you can browse, but not battle or vote. Contact the moderators if you think this is a mistake.
+        </p>
+      )}
     </header>
   );
 }

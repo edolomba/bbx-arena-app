@@ -63,7 +63,7 @@ export default async function Home() {
       <section className="grid gap-4">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-2xl font-bold [font-stretch:112%]">Top of the board</h2>
-          <Link href="/beatboxers" className="text-sm text-muted underline-offset-4 hover:underline">All beatboxers</Link>
+          <Link href="/ranking" className="text-sm text-muted underline-offset-4 hover:underline">Full ranking</Link>
         </div>
         {leaders.length ? (
           <ol className="grid border-t-2 border-ink">

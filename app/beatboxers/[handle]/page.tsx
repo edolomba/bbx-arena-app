@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import RatingChart from '@/components/profile/RatingChart';
+import ReportButton from '@/components/moderation/ReportButton';
 import { Avatar } from '@/components/directory/BeatboxerCard';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
 import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, signed } from '@/lib/format';
@@ -203,6 +204,11 @@ export default async function ProfilePage({ params, searchParams }: {
             )}
           </section>
         </>
+      )}
+      {!isMe && (
+        <div className="border-t border-line pt-4">
+          <ReportButton profileId={profile.id} signedIn={!!auth.user} label="Report this profile" />
+        </div>
       )}
     </main>
   );
