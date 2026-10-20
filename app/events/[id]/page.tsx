@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import EventView from '@/components/events/EventView';
+import BattleView from '@/components/battle/BattleView';
+import type { MatchRow, SwissRow } from '@/components/events/Bracket';
+import type { BattleJudge, BattleWithPlayers, JudgeVote, Submission, Vote } from '@/lib/types';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +15,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const [{ data: event }, { data: judges }, { data: entries }, { data: showcases }, { data: subs }, { data: standings }, { data: auth }] = await Promise.all([
     supabase.from('events').select('*, host:profiles!events_host_id_fkey(username)').eq('id', id).maybeSingle(),
     supabase.from('event_judges').select('judge_id, active, judge:profiles!event_judges_judge_id_fkey(username)').eq('event_id', id).order('created_at'),
-    supabase.from('event_entries').select('profile_id, status, stage_order, elim_place, elim_score, profile:profiles!event_entries_profile_id_fkey(username, country, elo_rating)').eq('event_id', id).order('created_at'),
+    supabase.from('event_entries').select('profile_id, status, stage_order, elim_place, elim_score, final_place, profile:profiles!event_entries_profile_id_fkey(username, country, elo_rating)').eq('event_id', id).order('created_at'),
     supabase.from('event_showcases').select('profile_id, audio_path, duration_ms, waveform_data, integrated_lufs').eq('event_id', id),
     supabase.from('elimination_submissions').select('judge_id, submitted_at').eq('event_id', id),
     supabase.rpc('event_standings', { p_event: id }),
@@ -26,8 +29,37 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     myRanking = (data ?? []).map((r) => r.profile_id);
   }
 
+  const [{ data: matches }, { data: swiss }] = await Promise.all([
+    supabase.from('event_matches').select('*').eq('event_id', id).order('round').order('slot'),
+    event.main_format === 'swiss' && ['main', 'finished'].includes(event.status)
+      ? supabase.rpc('swiss_standings', { p_event: id }) : Promise.resolve({ data: [] }),
+  ]);
+
+  // The battle on stage right now, shown inside the event page.
+  let stage: React.ReactNode = null;
+  if (event.current_battle_id) {
+    const bid = event.current_battle_id as string;
+    const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+    const [{ data: b }, { data: subs2 }, { data: votes }, { data: bj }, { data: jv }] = await Promise.all([
+      supabase.from('battles').select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), host:profiles!battles_host_id_fkey(username)`).eq('id', bid).maybeSingle(),
+      supabase.from('submissions').select('*').eq('battle_id', bid).order('round_number'),
+      supabase.from('votes').select('*, voter:profiles!votes_voter_id_fkey(username)').eq('battle_id', bid),
+      supabase.from('battle_judges').select('judge_id, is_reserve, active, judge:profiles!battle_judges_judge_id_fkey(username)').eq('battle_id', bid),
+      supabase.from('judge_votes').select('judge_id, voted_for').eq('battle_id', bid),
+    ]);
+    if (b) {
+      stage = (
+        <BattleView battle={b as BattleWithPlayers} submissions={(subs2 ?? []) as Submission[]} initialVotes={(votes ?? []) as Vote[]}
+          currentUserId={auth.user?.id ?? null} judges={(bj ?? []) as unknown as BattleJudge[]} judgeVotes={(jv ?? []) as JudgeVote[]} />
+      );
+    }
+  }
+
   return (
     <EventView
+      matches={(matches ?? []) as MatchRow[]}
+      swiss={(swiss ?? []) as SwissRow[]}
+      stage={stage}
       event={event as EventRow}
       judges={(judges ?? []) as unknown as EventJudge[]}
       entries={(entries ?? []) as unknown as EventEntry[]}

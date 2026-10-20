@@ -34,6 +34,7 @@ export function notificationText(n: AppNotification): string {
       if (d.what === 'paused') return d.next_session_at ? `${t} paused. Next session ${when(d.next_session_at)}` : `${t} paused`;
       if (d.what === 'resumed') return `${t} is live again`;
       if (d.what === 'judging') return `${t}: the judges are ranking the showcases`;
+      if ((d.what as string) === 'finished') return `${t} is over. See the final result`;
       return `${t}: the official classification is out`;
     }
     case 'battle_result': {

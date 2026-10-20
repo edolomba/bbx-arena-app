@@ -9,6 +9,7 @@ import Countdown from '@/components/Countdown';
 import EventStage from './EventStage';
 import JudgeRanking from './JudgeRanking';
 import StandingsTable from './StandingsTable';
+import Bracket, { type MatchRow, type SwissRow } from './Bracket';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
 
 interface Props {
@@ -20,11 +21,14 @@ interface Props {
   standings: StandingRow[];
   myRanking: string[];
   currentUserId: string | null;
+  matches: MatchRow[];
+  swiss: SwissRow[];
+  stage: React.ReactNode;
 }
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId }: Props) {
+export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId, matches, swiss, stage }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [busy, setBusy] = useState(false);
@@ -40,6 +44,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_entries', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_showcases', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'elimination_submissions', filter: `event_id=eq.${event.id}` }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_matches', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [supabase, event.id, router]);
@@ -194,17 +199,65 @@ export default function EventView({ event, judges, entries, showcases, submissio
         </section>
       )}
 
-      {/* ---------- Published ---------- */}
+      {/* ---------- Final result ---------- */}
+      {event.status === 'finished' && (
+        <section className="grid gap-4" aria-label="Final result">
+          <h2 className="text-2xl font-bold [font-stretch:112%]">Final result</h2>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {[1, 2, 3].map((place) => {
+              const e = entries.find((x) => (x as EventEntry & { final_place?: number }).final_place === place);
+              return (
+                <li key={place} className={`grid gap-1 rounded-2xl p-5 ${place === 1 ? 'bg-ink text-paper' : 'border border-line bg-surface'}`}>
+                  <span className="num text-4xl leading-none">{place === 1 ? '1st' : place === 2 ? '2nd' : '3rd'}</span>
+                  <span className="handle text-xl">{e ? `@${e.profile?.username}` : '—'}</span>
+                  {event.ranked && event.approved_at && <span className="text-sm opacity-70">+{place === 1 ? 1000 : place === 2 ? 500 : 350} points</span>}
+                </li>
+              );
+            })}
+          </ol>
+          <ol className="grid border-t-2 border-ink text-sm sm:grid-cols-2 sm:gap-x-8">
+            {entries.filter((x) => (x as EventEntry & { final_place?: number }).final_place && (x as EventEntry & { final_place?: number }).final_place! > 3)
+              .sort((a, b) => ((a as EventEntry & { final_place: number }).final_place - (b as EventEntry & { final_place: number }).final_place))
+              .map((x) => (
+                <li key={x.profile_id} className="flex justify-between border-b border-line py-1.5">
+                  <span>@{x.profile?.username}</span>
+                  <span className="num text-muted">{(x as EventEntry & { final_place: number }).final_place}</span>
+                </li>
+              ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ---------- Main stage ---------- */}
       {['main', 'finished'].includes(event.status) && (
-        <section className="grid gap-4">
-          <h2 className="text-2xl font-bold [font-stretch:112%]">Eliminations: official classification</h2>
-          <StandingsTable rows={standings} names={names} advanceCount={event.advance_count} />
+        <section className="grid gap-6">
           {event.status === 'main' && (
-            <p className="rounded-xl border border-dashed border-line p-4 text-muted">
-              The top {event.advance_count} go on to the {event.main_format === 'swiss' ? 'Swiss rounds' : 'knockout'}, small final and final.
-              The bracket arrives with the next update of BBX Arena.
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="mr-auto text-2xl font-bold [font-stretch:112%]">Main stage</h2>
+              {isHost && matches.length === 0 && (
+                <button disabled={busy} onClick={() => act('host_build_bracket')} className={`${btn} bg-ink text-paper`}>
+                  Build the {event.main_format === 'swiss' ? 'Swiss rounds' : 'bracket'}
+                </button>
+              )}
+              {isHost && (event.live
+                ? <button disabled={busy} onClick={() => act('host_pause_event', { p_next_session: null })} className={`${btn} border border-line`}>Pause</button>
+                : <button disabled={busy} onClick={() => act('host_resume_event')} className={`${btn} bg-ink text-paper`}>Resume the event</button>)}
+            </div>
           )}
+          {stage && (
+            <div className="rounded-3xl border-2 border-sub">
+              <p className="px-5 pt-4 text-sm font-semibold text-sub">On stage now</p>
+              {stage}
+            </div>
+          )}
+          {matches.length > 0 && (
+            <Bracket eventId={event.id} isHost={isHost} live={event.live} mainFormat={event.main_format}
+              matches={matches} swiss={swiss} names={names} currentBattleId={(event as EventRow & { current_battle_id?: string | null }).current_battle_id ?? null} />
+          )}
+          <details className="grid gap-4" open={event.status === 'main' && matches.length === 0}>
+            <summary className="cursor-pointer text-lg font-bold [font-stretch:112%]">Eliminations: official classification</summary>
+            <div className="mt-4"><StandingsTable rows={standings} names={names} advanceCount={event.advance_count} /></div>
+          </details>
         </section>
       )}
     </article>
