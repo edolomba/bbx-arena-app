@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { notificationText } from '@/lib/notifications';
+import { notificationHref, notificationText } from '@/lib/notifications';
 import { formatAgo } from '@/lib/format';
 import PushToggle from '@/components/push/PushToggle';
 import type { AppNotification } from '@/lib/types';
 
-const SELECT = 'id, kind, battle_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)';
+const SELECT = 'id, kind, battle_id, event_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)';
 
 export default function NotificationBell({ userId }: { userId: string }) {
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
       await supabase.rpc('mark_notifications_read', { p_ids: [n.id] });
       setItems((xs) => xs.map((x) => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
     }
-    if (n.battle_id) router.push(`/battles/${n.battle_id}`);
+    router.push(notificationHref(n));
   }
 
   return (

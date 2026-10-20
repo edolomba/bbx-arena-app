@@ -190,12 +190,13 @@ export interface ScoringRules {
 export type NotificationKind =
   | 'challenge_received' | 'challenge_accepted' | 'challenge_declined'
   | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result'
-  | 'judge_invited' | 'host_invited';
+  | 'judge_invited' | 'host_invited' | 'event_judge_invited' | 'event_update';
 
 export interface AppNotification {
   id: string;
   kind: NotificationKind;
   battle_id: string | null;
+  event_id?: string | null;
   data: {
     mode?: 'async' | 'live' | 'stage';
     starts_at?: string | null;
@@ -205,8 +206,75 @@ export interface AppNotification {
     outcome?: 'W' | 'L' | 'D' | 'N';
     forfeited_by_me?: boolean;
     elo_delta?: number | null;
+    title?: string;
+    what?: 'eliminations_started' | 'paused' | 'resumed' | 'judging' | 'published';
+    next_session_at?: string | null;
   };
   created_at: string;
   read_at: string | null;
   actor?: { username: string } | null;
+}
+
+export type EventStatus = 'registration' | 'eliminations' | 'judging' | 'main' | 'finished' | 'cancelled';
+
+export interface EventRow {
+  id: string;
+  host_id: string;
+  title: string;
+  description: string | null;
+  format: 'gbb' | 'seven_to_smoke';
+  status: EventStatus;
+  ranked: boolean;
+  approved_at: string | null;
+  max_participants: number;
+  advance_count: number;
+  main_format: 'knockout' | 'swiss';
+  judge_count: number;
+  showcase_seconds: number;
+  battle_round_seconds: number;
+  battle_rounds: number;
+  judge_vote_seconds: number;
+  registration_closes_at: string;
+  next_session_at: string | null;
+  live: boolean;
+  stage_profile: string | null;
+  stage_started_at: string | null;
+  stage_ends_at: string | null;
+  published_at: string | null;
+  created_at: string;
+  host?: { username: string } | null;
+}
+
+export interface EventEntry {
+  profile_id: string;
+  status: 'registered' | 'withdrawn' | 'removed' | 'qualified' | 'eliminated';
+  stage_order: number | null;
+  elim_place: number | null;
+  elim_score: number | null;
+  profile: { username: string; country: string | null; elo_rating: number } | null;
+}
+
+export interface EventShowcase {
+  profile_id: string;
+  audio_path: string;
+  duration_ms: number;
+  waveform_data: WaveformData;
+  integrated_lufs: number | null;
+}
+
+export interface EventJudge {
+  judge_id: string;
+  active: boolean;
+  judge: { username: string } | null;
+}
+
+export interface StandingRow {
+  profile_id: string;
+  positions: number[];
+  trimmed: number;
+  h2h: number;
+  full_sum: number;
+  firsts: number;
+  place: number;
+  tied: boolean;
 }

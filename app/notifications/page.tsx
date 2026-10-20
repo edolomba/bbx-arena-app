@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { notificationText } from '@/lib/notifications';
+import { notificationHref, notificationText } from '@/lib/notifications';
 import { formatAgo } from '@/lib/format';
 import type { AppNotification } from '@/lib/types';
 
@@ -13,7 +13,7 @@ export default async function NotificationsPage() {
   if (!user) redirect('/login?next=/notifications');
   const { data } = await supabase
     .from('notifications')
-    .select('id, kind, battle_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)')
+    .select('id, kind, battle_id, event_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)')
     .order('created_at', { ascending: false })
     .limit(100);
   const items = (data ?? []) as unknown as AppNotification[];
@@ -28,7 +28,7 @@ export default async function NotificationsPage() {
         <ul className="grid border-t-2 border-ink">
           {items.map((n) => (
             <li key={n.id} className="border-b border-line">
-              <Link href={n.battle_id ? `/battles/${n.battle_id}` : '#'} className="grid gap-0.5 py-3 hover:bg-surface">
+              <Link href={notificationHref(n)} className="grid gap-0.5 py-3 hover:bg-surface">
                 <span className="flex items-start gap-2">
                   {!n.read_at && <span className="mt-2 size-2 shrink-0 rounded-full bg-sub" aria-label="Unread" />}
                   <span>{notificationText(n)}</span>

@@ -14,10 +14,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'The live audio service isn’t set up yet.' }, { status: 500 });
   }
 
-  const { battleId } = (await request.json().catch(() => ({}))) as { battleId?: string };
-  if (!battleId) return NextResponse.json({ error: 'Missing battle.' }, { status: 400 });
+  const { battleId, eventId } = (await request.json().catch(() => ({}))) as { battleId?: string; eventId?: string };
+  if (!battleId && !eventId) return NextResponse.json({ error: 'Missing battle.' }, { status: 400 });
 
   const supabase = await createClient();
+
+  // Event rooms: every registered beatboxer may publish (they're only audible when called).
+  if (eventId) {
+    const [{ data: { user } }, { data: ev }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('events').select('id, status, live').eq('id', eventId).maybeSingle(),
+    ]);
+    if (!ev || !['eliminations', 'main'].includes(ev.status)) {
+      return NextResponse.json({ error: 'This event has no live part right now.' }, { status: 409 });
+    }
+    let performer = false;
+    let name = 'Guest';
+    if (user) {
+      const [{ data: entry }, { data: p }] = await Promise.all([
+        supabase.from('event_entries').select('status').eq('event_id', ev.id).eq('profile_id', user.id).maybeSingle(),
+        supabase.from('profiles').select('username').eq('id', user.id).maybeSingle(),
+      ]);
+      performer = !!entry && ['registered', 'qualified'].includes(entry.status);
+      if (p?.username) name = `@${p.username}`;
+    }
+    const token = new AccessToken(key, secret, { identity: user?.id ?? `guest-${crypto.randomUUID()}`, name, ttl: '6h' });
+    token.addGrant({
+      room: `event-${ev.id}`, roomJoin: true, canSubscribe: true, canPublish: performer, canPublishData: false,
+      canPublishSources: performer ? [TrackSource.MICROPHONE] : [],
+    });
+    return NextResponse.json({ token: await token.toJwt(), url, role: performer ? 'performer' : 'audience' });
+  }
   const [{ data: { user } }, { data: b }] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('battles').select('id, mode, status, starts_at, challenger_id, opponent_id').eq('id', battleId).maybeSingle(),

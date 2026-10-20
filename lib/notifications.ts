@@ -26,6 +26,16 @@ export function notificationText(n: AppNotification): string {
       return `${who} invited you to judge a stage battle on ${when(d.starts_at)}`;
     case 'host_invited':
       return `${who} asked you to host a stage battle on ${when(d.starts_at)}`;
+    case 'event_judge_invited':
+      return `${who} invited you to judge “${d.title ?? 'an event'}”`;
+    case 'event_update': {
+      const t = `“${d.title ?? 'Your event'}”`;
+      if (d.what === 'eliminations_started') return `${t}: the eliminations are live now`;
+      if (d.what === 'paused') return d.next_session_at ? `${t} paused. Next session ${when(d.next_session_at)}` : `${t} paused`;
+      if (d.what === 'resumed') return `${t} is live again`;
+      if (d.what === 'judging') return `${t}: the judges are ranking the showcases`;
+      return `${t}: the official classification is out`;
+    }
     case 'battle_result': {
       if (d.outcome === 'N') return `No votes on your battle with ${who}, so it ended without a result`;
       if (d.outcome === 'D') return `Your battle with ${who} ended in a draw`;
@@ -35,3 +45,7 @@ export function notificationText(n: AppNotification): string {
     }
   }
 }
+
+/** Where tapping a notification goes. */
+export const notificationHref = (n: { battle_id: string | null; event_id?: string | null }) =>
+  n.event_id ? `/events/${n.event_id}` : n.battle_id ? `/battles/${n.battle_id}` : '/notifications';

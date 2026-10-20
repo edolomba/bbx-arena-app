@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminActions from '@/components/moderation/AdminActions';
+import EventApproval from '@/components/moderation/EventApproval';
 import { formatAgo } from '@/lib/format';
 
 export const metadata = { title: 'Moderation' };
@@ -49,10 +50,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     .order('created_at', { ascending: !showOpen })
     .limit(100);
   const reports = (data ?? []) as unknown as ReportRow[];
+  const { data: pending } = await supabase.from('events').select('id, title, max_participants, host:profiles!events_host_id_fkey(username)')
+    .eq('ranked', true).is('approved_at', null).neq('status', 'cancelled').order('created_at');
 
   return (
     <main className="mx-auto grid max-w-4xl gap-6 px-4 py-10 sm:px-6">
       <h1 className="handle text-[clamp(2.2rem,6vw,3.6rem)] leading-none">Moderation</h1>
+      <section className="grid gap-3">
+        <h2 className="text-xl font-bold [font-stretch:112%]">Ranked events awaiting approval</h2>
+        <EventApproval events={((pending ?? []) as unknown as { id: string; title: string; max_participants: number; host: { username: string } | null }[])
+          .map((e) => ({ id: e.id, title: e.title, host: e.host?.username ?? '', max: e.max_participants }))} />
+      </section>
+      <h2 className="text-xl font-bold [font-stretch:112%]">Reports</h2>
       <nav className="flex gap-1">
         <Link href="/admin" aria-current={showOpen ? 'page' : undefined}
           className={`rounded-full px-4 py-1.5 text-sm ${showOpen ? 'bg-ink text-paper' : 'text-muted'}`}>Open reports</Link>

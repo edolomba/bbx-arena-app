@@ -21,6 +21,7 @@ export default async function Header() {
         </Link>
         <nav aria-label="Sections" className="flex min-w-0 gap-1 overflow-x-auto text-sm">
           <Link href="/battles" className={link}>Battles</Link>
+          <Link href="/events" className={link}>Events</Link>
           <Link href="/beatboxers" className={link}>Beatboxers</Link>
           <Link href="/ranking" className={link}>Ranking</Link>
           {me?.is_admin && <Link href="/admin" className={link}>Moderation</Link>}
@@ -31,6 +32,7 @@ export default async function Header() {
               <Link href="/battles/new" className="hidden rounded-full bg-ink px-4 py-1.5 text-paper sm:inline-block">
                 Start a battle
               </Link>
+              <Link href="/my-events" className={`${link} hidden md:inline`}>My events</Link>
               <NotificationBell userId={user.id} />
               {me && <Link href={`/beatboxers/${me.username}`} className={`${link} hidden sm:inline`}>@{me.username}</Link>}
               <form action="/auth/signout" method="post">

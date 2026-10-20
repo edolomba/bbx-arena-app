@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { notificationText } from '@/lib/notifications';
+import { notificationHref, notificationText } from '@/lib/notifications';
 import type { AppNotification } from '@/lib/types';
 
 /**
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: n } = await admin
     .from('notifications')
-    .select('id, user_id, kind, battle_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)')
+    .select('id, user_id, kind, battle_id, event_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)')
     .eq('id', id)
     .maybeSingle();
   if (!n) return NextResponse.json({ ok: true, sent: 0 });
@@ -40,8 +40,8 @@ export async function POST(request: Request) {
   const payload = JSON.stringify({
     title: 'BBX Arena',
     body: notificationText(n as unknown as AppNotification),
-    url: n.battle_id ? `/battles/${n.battle_id}` : '/notifications',
-    tag: n.battle_id ?? n.id,
+    url: notificationHref(n),
+    tag: n.battle_id ?? n.event_id ?? n.id,
   });
 
   let sent = 0;

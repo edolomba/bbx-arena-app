@@ -97,7 +97,10 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
     setError(null);
     setConnecting(true);
     try {
-      if (isPerformer) await rec.prepare();
+      if (isPerformer) {
+        const micError = await rec.prepare();
+        if (micError) throw new Error(micError);
+      }
       const res = await fetch('/api/livekit/token', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ battleId: battle.id }),
       });

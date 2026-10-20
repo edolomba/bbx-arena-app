@@ -25,9 +25,9 @@ function describeMicError(err: unknown): string {
   const name = err instanceof DOMException ? err.name : '';
   switch (name) {
     case 'NotAllowedError':
-      return 'Microphone access is blocked. Allow it in your browser’s site settings, then turn the mic on again.';
+      return 'Microphone access is blocked. Click the icon left of the web address, set Microphone to Allow, then reload the page. On Windows, also check Settings > Privacy > Microphone.';
     case 'NotFoundError':
-      return 'No microphone was found. Plug one in and try again.';
+      return 'No microphone was found on this device. Plug in a mic or a headset with a mic, then try again.';
     case 'NotReadableError':
       return 'Another app is using the microphone. Close it and try again.';
     case 'OverconstrainedError':
@@ -92,7 +92,7 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
   useEffect(() => teardown, [teardown]);
 
   const prepare = useCallback(
-    async (requestedDeviceId?: string) => {
+    async (requestedDeviceId?: string): Promise<string | null> => {
       teardown();
       setError(null);
       setWarnings([]);
@@ -185,10 +185,13 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
         analyserFullRef.current = analyserFull;
         analyserSubRef.current = analyserSub;
         setStatus('ready');
+        return null;
       } catch (err) {
         teardown();
-        setError(describeMicError(err));
+        const message = describeMicError(err);
+        setError(message);
         setStatus('error');
+        return message;
       }
     },
     [deviceId, teardown],
