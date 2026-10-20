@@ -6,9 +6,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: { default: 'BBX Arena', template: '%s · BBX Arena' },
   description: '1v1 beatbox battles with the bass intact. Profiles, ratings, live battles and public votes.',
+  icons: { icon: '/icon-192.png', apple: '/apple-icon.png' },
+  appleWebApp: { capable: true, title: 'BBX Arena', statusBarStyle: 'black-translucent' },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#16183a' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

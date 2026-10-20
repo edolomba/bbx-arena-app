@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import ProfileForm from '@/components/settings/ProfileForm';
 import DeleteAccount from '@/components/settings/DeleteAccount';
+import PushToggle from '@/components/push/PushToggle';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
         <h1 className="handle text-[clamp(2.2rem,6vw,3.6rem)] leading-none">Your profile</h1>
         <p className="text-muted">@{profile.username}. Everything here is public.</p>
       </div>
+      <PushToggle />
       <ProfileForm initial={profile} />
       <DeleteAccount username={profile.username} />
     </main>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notificationText } from '@/lib/notifications';
 import { formatAgo } from '@/lib/format';
+import PushToggle from '@/components/push/PushToggle';
 import type { AppNotification } from '@/lib/types';
 
 const SELECT = 'id, kind, battle_id, data, created_at, read_at, actor:profiles!notifications_actor_id_fkey(username)';
@@ -89,6 +90,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
             <p className="font-semibold">Notifications</p>
             {unread > 0 && <button onClick={markAll} className="text-sm text-muted hover:text-ink">Mark all as read</button>}
           </div>
+          <PushToggle compact />
           {items.length === 0 ? (
             <p className="px-4 py-6 text-sm text-muted">Nothing yet. Challenges, your turns and results show up here.</p>
           ) : (
