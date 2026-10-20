@@ -212,10 +212,10 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
     }, 100);
   }, []);
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(async (): Promise<PreparedTake | null> => {
     const ctx = ctxRef.current;
     const node = nodeRef.current;
-    if (!ctx || !node || statusRef.current !== 'recording') return;
+    if (!ctx || !node || statusRef.current !== 'recording') return null;
     statusRef.current = 'processing';
     setStatus('processing');
     window.clearInterval(timerRef.current);
@@ -238,7 +238,7 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
       const blob = encodeWav(channels, sr, bitDepth);
       const analysis = await analyzeAudio(buffer);
 
-      setTake({
+      const result: PreparedTake = {
         blob,
         fileExt: 'wav',
         contentType: 'audio/wav',
@@ -248,16 +248,19 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
         sampleRate: sr,
         bitDepth,
         channels: channels.length,
-      });
+      };
+      setTake(result);
       setElapsedMs(analysis.durationMs);
       setStatus('done');
+      return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The take couldn’t be processed.');
       setStatus('ready');
+      return null;
     }
   }, [bitDepth]);
 
-  stopRef.current = stop;
+  stopRef.current = async () => { await stop(); };
 
   /** Discard the current take and go back to a live mic. */
   const reset = useCallback(() => {
@@ -300,7 +303,11 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
     return { rmsDb: toDb(rms), peakDb: toDb(peak), subRmsDb: toDb(Math.sqrt(subSum / b.length)) };
   }, []);
 
+  /** The raw mic stream, so a live stage can send the same microphone it records. */
+  const getStream = useCallback(() => streamRef.current, []);
+
   return {
+    getStream,
     status,
     error,
     warnings,

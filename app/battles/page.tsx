@@ -22,7 +22,7 @@ export default async function BattlesPage({ searchParams }: { searchParams: Prom
   const { data: { user } } = await supabase.auth.getUser();
 
   let q = supabase.from('battles').select(SELECT).in('status', [...t.statuses]);
-  if (t.liveOnly) q = q.eq('mode', 'live');
+  if (t.liveOnly) q = q.in('mode', ['live', 'stage']);
   if (tab === 'progress') q = q.eq('mode', 'async');
   q = tab === 'live' ? q.order('starts_at', { ascending: true }) : q.order('created_at', { ascending: false });
   const { data } = await q.limit(60);

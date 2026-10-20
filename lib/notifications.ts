@@ -9,15 +9,17 @@ export function notificationText(n: AppNotification): string {
   const d = n.data ?? {};
   switch (n.kind) {
     case 'challenge_received':
+      if (d.mode === 'stage') return `${who} challenged you to a stage battle, real time, on ${when(d.starts_at)}`;
       return d.mode === 'live' ? `${who} challenged you to a live battle on ${when(d.starts_at)}` : `${who} challenged you to a battle`;
     case 'challenge_accepted':
+      if (d.mode === 'stage') return `${who} accepted your stage battle. Be in the room before ${when(d.starts_at)}`;
       return d.mode === 'live' ? `${who} accepted your live battle. Lock in your round before ${when(d.starts_at)}` : `${who} accepted your challenge. Your turn to open`;
     case 'challenge_declined':
       return `${who} declined your challenge`;
     case 'your_turn':
       return `Your turn against ${who}`;
     case 'live_soon':
-      return `Your live battle against ${who} starts in 15 minutes`;
+      return `Your battle against ${who} starts in 15 minutes. Join early with headphones`;
     case 'voting_open':
       return `Voting is open on your battle with ${who}`;
     case 'battle_result': {

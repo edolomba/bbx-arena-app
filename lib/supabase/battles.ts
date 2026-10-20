@@ -61,9 +61,10 @@ export async function advanceBattle(supabase: SupabaseClient, battleId: string) 
 export interface NewBattle {
   opponent: string;
   roundSeconds: number;
-  mode: 'async' | 'live';
+  mode: 'async' | 'live' | 'stage';
   votingHours: number;
   startsInMinutes: number | null;
+  rounds?: number;
 }
 
 export async function createBattle(supabase: SupabaseClient, b: NewBattle): Promise<string> {
@@ -72,7 +73,8 @@ export async function createBattle(supabase: SupabaseClient, b: NewBattle): Prom
     p_round_duration: b.roundSeconds,
     p_mode: b.mode,
     p_voting_hours: b.votingHours,
-    p_starts_in_minutes: b.mode === 'live' ? b.startsInMinutes : null,
+    p_starts_in_minutes: b.mode === 'async' ? null : b.startsInMinutes,
+    p_rounds_per_player: b.rounds ?? 1,
   });
   if (error) throw new Error(error.message);
   return data as string;

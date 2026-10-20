@@ -183,7 +183,7 @@ export default async function ProfilePage({ params, searchParams }: {
                     <tr key={g.battle_id} className="border-b border-line">
                       <td className="py-2.5 pr-3 whitespace-nowrap">
                         <Link href={`/battles/${g.battle_id}`} className="underline-offset-4 hover:underline">{formatDate(g.finished_at)}</Link>
-                        {g.mode === 'live' && <span className="ml-2 rounded bg-sub px-1 text-xs font-bold text-paper">Live</span>}
+                        {g.mode !== 'async' && <span className="ml-2 rounded bg-sub px-1 text-xs font-bold text-paper">{g.mode === 'stage' ? 'Stage' : 'Live'}</span>}
                       </td>
                       <td className="py-2.5 pr-3"><Link href={`/beatboxers/${g.opponent_username}`} className="underline-offset-4 hover:underline">@{g.opponent_username}</Link></td>
                       <td className={`py-2.5 pr-3 ${g.outcome === 'W' ? 'text-win' : g.outcome === 'L' ? 'text-loss' : ''}`}>{resultText(g)}</td>

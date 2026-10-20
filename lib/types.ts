@@ -1,5 +1,5 @@
 export type BattleStatus = 'open' | 'pending' | 'active' | 'live' | 'voting' | 'finished' | 'cancelled';
-export type BattleMode = 'async' | 'live';
+export type BattleMode = 'async' | 'live' | 'stage';
 export type BattleResult = 'decision' | 'forfeit' | 'draw' | 'no_contest';
 
 /** Peaks normalised to the loudest sample of the take. `low` is the < ~100 Hz band. */
@@ -173,7 +173,7 @@ export interface AppNotification {
   kind: NotificationKind;
   battle_id: string | null;
   data: {
-    mode?: 'async' | 'live';
+    mode?: 'async' | 'live' | 'stage';
     starts_at?: string | null;
     deadline?: string | null;
     ends_at?: string | null;

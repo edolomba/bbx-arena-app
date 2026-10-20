@@ -11,7 +11,7 @@ export default async function Home() {
   const supabase = await createClient();
   const [{ data: { user } }, live, voting, top] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from('battles').select(SELECT).eq('mode', 'live').in('status', ['active', 'live']).order('starts_at').limit(6),
+    supabase.from('battles').select(SELECT).in('mode', ['live', 'stage']).in('status', ['active', 'live']).order('starts_at').limit(6),
     supabase.from('battles').select(SELECT).eq('status', 'voting').order('voting_ends_at').limit(6),
     supabase.from('directory_entries').select('*').gt('battles_count', 0).order('elo_rating', { ascending: false }).limit(5),
   ]);

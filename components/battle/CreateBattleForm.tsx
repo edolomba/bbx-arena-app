@@ -39,7 +39,8 @@ function Segmented<T extends string | number>({
 export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOpponent?: string }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const [mode, setMode] = useState<'async' | 'live'>('async');
+  const [mode, setMode] = useState<'async' | 'live' | 'stage'>('async');
+  const [rounds, setRounds] = useState<number>(1);
   const [opponent, setOpponent] = useState(defaultOpponent);
   const [roundSeconds, setRoundSeconds] = useState<number>(45);
   const [votingHours, setVotingHours] = useState<number>(12);
@@ -52,7 +53,7 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
     setBusy(true);
     setError(null);
     try {
-      const id = await createBattle(supabase, { opponent, roundSeconds, mode, votingHours, startsInMinutes: startsIn });
+      const id = await createBattle(supabase, { opponent, roundSeconds, mode, votingHours, startsInMinutes: startsIn, rounds: mode === 'stage' ? rounds : 1 });
       router.push(`/battles/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The battle wasn’t created. Try again.');
@@ -62,14 +63,15 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
 
   const modes = [
     { value: 'async' as const, title: 'Take turns', text: 'Each of you records on your own time. People listen and vote whenever they like.' },
-    { value: 'live' as const, title: 'Live battle', text: 'Rounds premiere at a set time. Everyone in the room hears them together, then judges.' },
+    { value: 'live' as const, title: 'Live premiere', text: 'You both record before a set time. The rounds premiere together for everyone in the room.' },
+    { value: 'stage' as const, title: 'Stage, real time', text: 'Mic to mic at a set time, like a Discord battle. Everyone hears it as it happens, with the bass intact.' },
   ];
 
   return (
     <form onSubmit={onSubmit} className="grid max-w-2xl gap-7">
       <fieldset className="grid gap-2">
         <legend className="mb-2 text-sm text-muted">Format</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           {modes.map((m) => (
             <div key={m.value} className="grid">
               <input type="radio" id={`mode-${m.value}`} name="mode" className="peer sr-only" checked={mode === m.value} onChange={() => setMode(m.value)} />
@@ -93,34 +95,42 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
             value={opponent}
             onChange={(e) => setOpponent(e.target.value.replace(/^@/, '').trim())}
             placeholder="handle"
-            required={mode === 'live'}
+            required={mode !== 'async'}
             className="w-full bg-transparent px-1 py-2.5 text-base outline-none"
           />
         </div>
         <span className="text-muted">
-          {mode === 'live' ? 'Live battles need a named opponent.' : 'Leave it empty to post an open challenge anyone can take.'}
+          {mode !== 'async' ? 'Live and stage battles need a named opponent.' : 'Leave it empty to post an open challenge anyone can take.'}
         </span>
       </label>
 
       <Segmented name="round" legend="Round length" value={roundSeconds} onChange={setRoundSeconds}
         options={ROUND_DURATIONS.map((s) => ({ value: s, label: `${s} seconds` }))} />
 
-      {mode === 'live' ? (
+      {mode === 'stage' && (
+        <Segmented name="rounds" legend="Rounds each" value={rounds} onChange={setRounds}
+          options={[{ value: 1, label: '1 round' }, { value: 2, label: '2 rounds' }]}
+          note="Turns alternate: you open, your opponent answers." />
+      )}
+
+      {mode !== 'async' ? (
         <Segmented name="start" legend="Starts" value={startsIn} onChange={setStartsIn}
           options={LIVE_STARTS.map((s) => ({ value: s.minutes, label: s.label }))}
-          note="Your opponent has to accept, and both rounds have to be in, before the start. A missing round counts as a forfeit." />
+          note={mode === 'stage'
+            ? 'Your opponent has to accept before the start. Both of you join the room a few minutes early with headphones.'
+            : 'Your opponent has to accept, and both rounds have to be in, before the start. A missing round counts as a forfeit.'} />
       ) : (
         <p className="text-sm text-muted">You record first. Each battler then has 24 hours to respond.</p>
       )}
 
       <Segmented name="vote" legend="Voting stays open" value={votingHours} onChange={setVotingHours}
         options={VOTING_HOURS.map((h) => ({ value: h, label: hoursText(h) }))}
-        note={mode === 'live' ? 'Counted from the moment the last round finishes playing.' : 'Counted from the moment both rounds are in.'} />
+        note={mode !== 'async' ? 'Counted from the moment the last round ends.' : 'Counted from the moment both rounds are in.'} />
 
       {error && <p role="alert" className="text-loss">{error}</p>}
       <div className="flex flex-wrap gap-3">
         <button disabled={busy} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-          {busy ? 'Creating…' : mode === 'live' ? 'Schedule live battle' : opponent ? 'Send challenge' : 'Post open challenge'}
+          {busy ? 'Creating…' : mode === 'stage' ? 'Schedule stage battle' : mode === 'live' ? 'Schedule live battle' : opponent ? 'Send challenge' : 'Post open challenge'}
         </button>
       </div>
     </form>

@@ -10,6 +10,7 @@ import WaveformPlayer from '@/components/audio/WaveformPlayer';
 import AudioRecorder from '@/components/audio/AudioRecorder';
 import Countdown from '@/components/Countdown';
 import LiveRoom from './LiveRoom';
+import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
 import { flagEmoji, hoursText, intervalHours, signed } from '@/lib/format';
 import type { BattleWithPlayers, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
@@ -87,7 +88,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   useEffect(() => {
     const due: (string | null)[] = [];
     if (battle.status === 'open' || battle.status === 'pending') due.push(battle.turn_deadline);
-    if (battle.status === 'active') due.push(battle.mode === 'live' ? battle.starts_at : battle.turn_deadline);
+    if (battle.status === 'active') due.push(battle.mode !== 'async' ? battle.starts_at : battle.turn_deadline);
     if (battle.status === 'live') due.push(battle.live_ends_at);
     if (battle.status === 'voting') due.push(battle.voting_ends_at);
     const next = due.filter(Boolean).map((d) => new Date(d!).getTime()).sort((a, b) => a - b)[0];
@@ -107,6 +108,8 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
     { id: battle.opponent_id, profile: opponent },
   ];
   const isLive = battle.mode === 'live';
+  const isStage = battle.mode === 'stage';
+  const scheduled = isLive || isStage;
   const votingHours = intervalHours(battle.voting_window);
   const isParticipant = currentUserId != null && (currentUserId === battle.challenger_id || currentUserId === battle.opponent_id);
   const myVote = votes.find((v) => v.voter_id === currentUserId) ?? null;
@@ -130,7 +133,9 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   const gainFor = (s: Submission) =>
     matchLoudness && loudnessTarget != null && s.integrated_lufs != null ? loudnessTarget - s.integrated_lufs : 0;
 
-  const heardAll = submissions.length > 0 && submissions.every((s) => (listened[s.id] ?? 0) >= LISTEN_TO_VOTE);
+  // Stage battles also count what was heard live, keyed by battler and round.
+  const heardOf = (s: Submission) => Math.max(listened[s.id] ?? 0, listened[`u:${s.user_id}:${s.round_number}`] ?? 0);
+  const heardAll = submissions.length > 0 && submissions.every((s) => heardOf(s) >= LISTEN_TO_VOTE);
   const expectedRound = Math.floor(battle.turn_number / 2) + 1;
 
   const statusLine = (() => {
@@ -138,10 +143,11 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
       case 'open':
         return <>Open challenge, waiting for an opponent. Expires in <Countdown to={battle.turn_deadline!} />.</>;
       case 'pending':
-        return isLive
+        return scheduled
           ? <>Waiting for @{nameOf(battle.opponent_id)} to accept. The battle starts in <Countdown to={battle.starts_at!} />.</>
           : <>Waiting for @{nameOf(battle.opponent_id)} to accept. Expires in <Countdown to={battle.turn_deadline!} />.</>;
       case 'active':
+        if (isStage) return <>The stage opens in <Countdown to={battle.starts_at!} />.</>;
         if (isLive) return <>Rounds are being locked in. The battle starts in <Countdown to={battle.starts_at!} />.</>;
         return battle.current_turn_user_id === currentUserId
           ? <>Your turn. <Countdown to={battle.turn_deadline!} /> left to respond.</>
@@ -152,7 +158,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
         return <>Voting closes in <Countdown to={battle.voting_ends_at!} />.</>;
       case 'finished':
         if (battle.result === 'forfeit')
-          return isLive
+          return scheduled
             ? <>@{nameOf(battle.winner_id)} wins by forfeit. @{nameOf(battle.forfeited_by)} didn’t get a round in before the start.</>
             : <>@{nameOf(battle.winner_id)} wins by forfeit. @{nameOf(battle.forfeited_by)} missed the response window.</>;
         if (battle.result === 'draw') return <>Draw, {tally[0]} votes each.</>;
@@ -163,7 +169,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
     }
   })();
 
-  const details = `${isLive ? 'Live battle. ' : ''}${battle.rounds_per_player === 1 ? 'One round' : `${battle.rounds_per_player} rounds`} each, ${battle.round_duration_seconds} seconds per round, voting open ${hoursText(votingHours)}${isLive ? ' after the last round' : ''}`;
+  const details = `${isStage ? 'Stage battle, real time. ' : isLive ? 'Live battle. ' : ''}${battle.rounds_per_player === 1 ? 'One round' : `${battle.rounds_per_player} rounds`} each, ${battle.round_duration_seconds} seconds per round, voting open ${hoursText(votingHours)}${scheduled ? ' after the last round' : ''}`;
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -192,6 +198,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
     (battle.status === 'open' || (battle.status === 'pending' && battle.opponent_id === currentUserId));
   const canDecline = isParticipant && (battle.status === 'open' || battle.status === 'pending');
   const showLiveRoom = isLive && (battle.status === 'active' || battle.status === 'live');
+  const showStage = isStage && (battle.status === 'active' || battle.status === 'live');
   const inviteUrl = shareToken && origin ? `${origin}/battles/${battle.id}?t=${shareToken}` : null;
 
   return (
@@ -235,7 +242,9 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
         )}
       </header>
 
-      {showLiveRoom ? (
+      {showStage ? (
+        <StageRoom battle={battle} currentUserId={currentUserId} onHeard={addHeard} />
+      ) : showLiveRoom ? (
         <LiveRoom battle={battle} submissions={submissions} currentUserId={currentUserId} onHeard={addHeard} />
       ) : (
         <>
@@ -251,6 +260,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                 Sub-bass below 100 Hz
               </span>
               {isLive && <span className="text-muted">Replays of the live premiere.</span>}
+              {isStage && <span className="text-muted">Lossless replays recorded on each battler’s device during the stage.</span>}
             </div>
           )}
 
@@ -262,10 +272,10 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                   <div className="grid gap-6 md:grid-cols-2 md:gap-10">
                     {sides.map((side, idx) => {
                       const sub = submissions.find((s) => s.user_id === side.id && s.round_number === round);
-                      const isTurn = !isLive && battle.status === 'active' && battle.current_turn_user_id === side.id && round === expectedRound;
+                      const isTurn = !scheduled && battle.status === 'active' && battle.current_turn_user_id === side.id && round === expectedRound;
                       const who = side.profile ? `@${side.profile.username}` : 'Open slot';
                       if (sub) {
-                        const heard = listened[sub.id] ?? 0;
+                        const heard = heardOf(sub);
                         return (
                           <div key={idx} className="grid gap-2">
                             <p className="text-sm">{who}{!sub.is_lossless && <span className="ml-2 text-muted">compressed upload</span>}</p>
@@ -289,7 +299,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                       return (
                         <div key={idx} className="grid min-h-28 place-items-center rounded-xl border border-dashed border-line p-4 text-center text-muted">
                           {isTurn ? <span>Waiting for {who}. <Countdown to={battle.turn_deadline!} /> left.</span>
-                            : battle.status === 'finished' ? 'Not recorded' : `${who} hasn’t recorded this round yet`}
+                            : isStage ? 'No replay for this round yet' : battle.status === 'finished' ? 'Not recorded' : `${who} hasn’t recorded this round yet`}
                         </div>
                       );
                     })}
