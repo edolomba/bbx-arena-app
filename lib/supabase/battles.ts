@@ -65,6 +65,10 @@ export interface NewBattle {
   votingHours: number;
   startsInMinutes: number | null;
   rounds?: number;
+  host?: string;
+  judges?: string[];
+  reserveJudge?: string;
+  judgeSeconds?: number;
 }
 
 export async function createBattle(supabase: SupabaseClient, b: NewBattle): Promise<string> {
@@ -75,7 +79,18 @@ export async function createBattle(supabase: SupabaseClient, b: NewBattle): Prom
     p_voting_hours: b.votingHours,
     p_starts_in_minutes: b.mode === 'async' ? null : b.startsInMinutes,
     p_rounds_per_player: b.rounds ?? 1,
+    p_host_username: b.mode === 'stage' ? b.host?.trim() || null : null,
+    p_judges: b.mode === 'stage' && b.judges?.length ? b.judges.map((j) => j.trim()) : null,
+    p_reserve_judge: b.mode === 'stage' ? b.reserveJudge?.trim() || null : null,
+    p_judge_seconds: b.judgeSeconds ?? 15,
   });
   if (error) throw new Error(error.message);
   return data as string;
+}
+
+/** Host and judge actions for stage battles. Every rule is enforced again in the database. */
+export async function stageRpc(supabase: SupabaseClient, fn: string, args: Record<string, unknown>) {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data;
 }

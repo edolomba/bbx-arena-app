@@ -22,6 +22,10 @@ export function notificationText(n: AppNotification): string {
       return `Your battle against ${who} starts in 15 minutes. Join early with headphones`;
     case 'voting_open':
       return `Voting is open on your battle with ${who}`;
+    case 'judge_invited':
+      return `${who} invited you to judge a stage battle on ${when(d.starts_at)}`;
+    case 'host_invited':
+      return `${who} asked you to host a stage battle on ${when(d.starts_at)}`;
     case 'battle_result': {
       if (d.outcome === 'N') return `No votes on your battle with ${who}, so it ended without a result`;
       if (d.outcome === 'D') return `Your battle with ${who} ended in a draw`;

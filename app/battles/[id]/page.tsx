@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import BattleView from '@/components/battle/BattleView';
-import type { BattleWithPlayers, Submission, Vote } from '@/lib/types';
+import type { BattleJudge, BattleWithPlayers, JudgeVote, Submission, Vote } from '@/lib/types';
 
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
 
@@ -22,16 +22,18 @@ export default async function BattlePage({
   // Push the battle past any deadline before reading it, so the page is never stale.
   await supabase.rpc('advance_battle', { p_battle_id: id });
 
-  const [{ data: battle }, { data: submissions }, { data: votes }, { data: auth }, { data: invite }] = await Promise.all([
+  const [{ data: battle }, { data: submissions }, { data: votes }, { data: auth }, { data: invite }, { data: judges }, { data: judgeVotes }] = await Promise.all([
     supabase
       .from('battles')
-      .select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER})`)
+      .select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), host:profiles!battles_host_id_fkey(username)`)
       .eq('id', id)
       .maybeSingle(),
     supabase.from('submissions').select('*').eq('battle_id', id).order('round_number'),
     supabase.from('votes').select('*, voter:profiles!votes_voter_id_fkey(username)').eq('battle_id', id).order('created_at'),
     supabase.auth.getUser(),
     supabase.from('battle_invites').select('token').eq('battle_id', id).maybeSingle(),
+    supabase.from('battle_judges').select('judge_id, is_reserve, active, judge:profiles!battle_judges_judge_id_fkey(username)').eq('battle_id', id).order('created_at'),
+    supabase.from('judge_votes').select('judge_id, voted_for').eq('battle_id', id),
   ]);
 
   if (!battle) notFound();
@@ -44,6 +46,8 @@ export default async function BattlePage({
       currentUserId={auth.user?.id ?? null}
       inviteToken={t ?? null}
       shareToken={invite?.token ?? null}
+      judges={(judges ?? []) as unknown as BattleJudge[]}
+      judgeVotes={(judgeVotes ?? []) as JudgeVote[]}
     />
   );
 }

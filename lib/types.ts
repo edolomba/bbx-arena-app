@@ -81,11 +81,34 @@ export interface Battle {
   opponent_elo_delta: number | null;
   created_at: string;
   finished_at: string | null;
+  /** Stage battles run by a host (0006). */
+  host_id: string | null;
+  judge_count: number | null;
+  judge_vote_seconds: number;
+  ranked: boolean;
+  stage_phase: 'idle' | 'round' | 'voting' | 'tiebreak' | 'result';
+  stage_slot: number | null;
+  stage_started_at: string | null;
+  stage_ends_at: string | null;
+  stage_votes_in: number;
+}
+
+export interface BattleJudge {
+  judge_id: string;
+  is_reserve: boolean;
+  active: boolean;
+  judge: { username: string } | null;
+}
+
+export interface JudgeVote {
+  judge_id: string;
+  voted_for: string;
 }
 
 export interface BattleWithPlayers extends Battle {
   challenger: ProfileSummary;
   opponent: ProfileSummary | null;
+  host?: { username: string } | null;
 }
 
 export interface Submission {
@@ -166,7 +189,8 @@ export interface ScoringRules {
 
 export type NotificationKind =
   | 'challenge_received' | 'challenge_accepted' | 'challenge_declined'
-  | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result';
+  | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result'
+  | 'judge_invited' | 'host_invited';
 
 export interface AppNotification {
   id: string;

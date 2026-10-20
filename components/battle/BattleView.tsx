@@ -13,7 +13,7 @@ import LiveRoom from './LiveRoom';
 import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
 import { flagEmoji, hoursText, intervalHours, signed } from '@/lib/format';
-import type { BattleWithPlayers, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
+import type { BattleJudge, BattleWithPlayers, JudgeVote, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
 
 interface Props {
   battle: BattleWithPlayers;
@@ -24,6 +24,8 @@ interface Props {
   inviteToken?: string | null;
   /** The challenger's own invite token, to show a shareable link. */
   shareToken?: string | null;
+  judges?: BattleJudge[];
+  judgeVotes?: JudgeVote[];
 }
 
 /** Fraction of each round a voter must actually hear before voting unlocks. */
@@ -55,7 +57,7 @@ function PlayerHeader({ p, align, isWinner, eloDelta }: {
   );
 }
 
-export default function BattleView({ battle, submissions, initialVotes, currentUserId, inviteToken, shareToken }: Props) {
+export default function BattleView({ battle, submissions, initialVotes, currentUserId, inviteToken, shareToken, judges = [], judgeVotes = [] }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [votes, setVotes] = useState<Vote[]>(initialVotes);
@@ -77,6 +79,8 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battles', filter: `id=eq.${battle.id}` },
         () => router.refresh())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'submissions', filter: `battle_id=eq.${battle.id}` },
+        () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_judges', filter: `battle_id=eq.${battle.id}` },
         () => router.refresh())
       .subscribe();
     return () => {
@@ -109,6 +113,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   ];
   const isLive = battle.mode === 'live';
   const isStage = battle.mode === 'stage';
+  const judged = isStage && (battle.judge_count ?? 0) > 0;
   const scheduled = isLive || isStage;
   const votingHours = intervalHours(battle.voting_window);
   const isParticipant = currentUserId != null && (currentUserId === battle.challenger_id || currentUserId === battle.opponent_id);
@@ -163,13 +168,17 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             : <>@{nameOf(battle.winner_id)} wins by forfeit. @{nameOf(battle.forfeited_by)} missed the response window.</>;
         if (battle.result === 'draw') return <>Draw, {tally[0]} votes each.</>;
         if (battle.result === 'no_contest') return <>No votes were cast, so ratings didn’t change.</>;
+        if (judged) {
+          const jw = judgeVotes.filter((v) => v.voted_for === battle.winner_id).length;
+          return <>@{nameOf(battle.winner_id)} wins on the judges’ decision{judgeVotes.length ? `, ${jw} to ${judgeVotes.length - jw}` : ''}.</>;
+        }
         return <>@{nameOf(battle.winner_id)} wins by decision, {Math.max(...tally)} to {Math.min(...tally)}.</>;
       case 'cancelled':
         return <>This challenge expired or was declined before it started.</>;
     }
   })();
 
-  const details = `${isStage ? 'Stage battle, real time. ' : isLive ? 'Live battle. ' : ''}${battle.rounds_per_player === 1 ? 'One round' : `${battle.rounds_per_player} rounds`} each, ${battle.round_duration_seconds} seconds per round, voting open ${hoursText(votingHours)}${scheduled ? ' after the last round' : ''}`;
+  const details = `${isStage ? `Stage battle, real time${battle.host ? `, hosted by @${battle.host.username}` : ''}. ` : isLive ? 'Live battle. ' : ''}${battle.rounds_per_player === 1 ? 'One round' : `${battle.rounds_per_player} rounds`} each, ${battle.round_duration_seconds} seconds per round${judged ? `, ${battle.judge_count} judges` : `, voting open ${hoursText(votingHours)}${scheduled ? ' after the last round' : ''}`}${battle.ranked ? '' : '. Casual: no rating or points'}`;
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -243,7 +252,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
       </header>
 
       {showStage ? (
-        <StageRoom battle={battle} currentUserId={currentUserId} onHeard={addHeard} />
+        <StageRoom battle={battle} judges={judges} votes={votes} currentUserId={currentUserId} onHeard={addHeard} />
       ) : showLiveRoom ? (
         <LiveRoom battle={battle} submissions={submissions} currentUserId={currentUserId} onHeard={addHeard} />
       ) : (
@@ -311,7 +320,32 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
         </>
       )}
 
-      {(battle.status === 'voting' || battle.status === 'finished') && battle.opponent_id && battle.result !== 'forfeit' && (
+      {judged && battle.status === 'finished' && (
+        <section aria-labelledby="judges-heading" className="grid gap-4 rounded-2xl bg-surface p-5 sm:p-6">
+          <h3 id="judges-heading" className="text-xl">Judges’ decision</h3>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {judges.filter((j) => j.active).map((j) => {
+              const v = judgeVotes.find((x) => x.judge_id === j.judge_id);
+              return (
+                <li key={j.judge_id} className="flex justify-between gap-3 border-b border-line py-2">
+                  <span>@{j.judge?.username}{j.is_reserve ? <span className="text-muted"> (reserve)</span> : null}</span>
+                  <span className={v ? (v.voted_for === battle.winner_id ? 'text-win' : '') : 'text-muted'}>
+                    {v ? `@${nameOf(v.voted_for)}` : j.is_reserve ? 'not needed' : 'didn’t vote'}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {judgeVotes.length > 0 && judgeVotes.filter((v) => v.voted_for === battle.winner_id).length * 2 === judgeVotes.length && (
+            <p className="text-sm text-muted">The judges were tied, so the host decided.</p>
+          )}
+          <p className="text-sm text-muted">
+            Crowd vote, just for fun: @{challenger.username} {tally[0]} to {tally[1]} @{opponent?.username}
+          </p>
+        </section>
+      )}
+
+      {!judged && (battle.status === 'voting' || battle.status === 'finished') && battle.opponent_id && battle.result !== 'forfeit' && (
         <section aria-labelledby="vote-heading" className="grid gap-5 rounded-2xl bg-surface p-5 sm:p-6">
           <h3 id="vote-heading" className="text-xl">{battle.status === 'voting' ? 'Who took it?' : 'Votes'}</h3>
 
