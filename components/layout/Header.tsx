@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import NotificationBell from './NotificationBell';
+import { getT } from '@/lib/i18n/server';
 
 /** Site header. Server component: reads the session from cookies. */
 export default async function Header() {
   const supabase = await createClient();
+  const { t } = await getT();
   const { data: { user } } = await supabase.auth.getUser();
   let me: { username: string; is_admin: boolean; suspended_at: string | null } | null = null;
   if (user) {
@@ -20,36 +22,36 @@ export default async function Header() {
           BBX Arena<span className="text-sub">.</span>
         </Link>
         <nav aria-label="Sections" className="flex min-w-0 gap-1 overflow-x-auto text-sm">
-          <Link href="/battles" className={link}>Battles</Link>
-          <Link href="/events" className={link}>Events</Link>
-          <Link href="/beatboxers" className={link}>Beatboxers</Link>
-          <Link href="/ranking" className={link}>Ranking</Link>
-          {me?.is_admin && <Link href="/admin" className={link}>Moderation</Link>}
+          <Link href="/battles" className={link}>{t.nav.battles}</Link>
+          <Link href="/events" className={link}>{t.nav.events}</Link>
+          <Link href="/beatboxers" className={link}>{t.nav.beatboxers}</Link>
+          <Link href="/ranking" className={link}>{t.nav.ranking}</Link>
+          {me?.is_admin && <Link href="/admin" className={link}>{t.nav.moderation}</Link>}
         </nav>
         <div className="ml-auto flex items-center gap-2 text-sm">
           {user ? (
             <>
               <Link href="/battles/new" className="hidden rounded-full bg-ink px-4 py-1.5 text-paper sm:inline-block">
-                Start a battle
+                {t.nav.startBattle}
               </Link>
-              <Link href="/my-events" className={`${link} hidden md:inline`}>My events</Link>
+              <Link href="/my-events" className={`${link} hidden md:inline`}>{t.nav.myEvents}</Link>
               <NotificationBell userId={user.id} />
               {me && <Link href={`/beatboxers/${me.username}`} className={`${link} hidden sm:inline`}>@{me.username}</Link>}
               <form action="/auth/signout" method="post">
-                <button className={link}>Log out</button>
+                <button className={link}>{t.nav.logOut}</button>
               </form>
             </>
           ) : (
             <>
-              <Link href="/login" className={link}>Log in</Link>
-              <Link href="/signup" className="rounded-full bg-ink px-4 py-1.5 text-paper">Sign up</Link>
+              <Link href="/login" className={link}>{t.nav.logIn}</Link>
+              <Link href="/signup" className="rounded-full bg-ink px-4 py-1.5 text-paper">{t.nav.signUp}</Link>
             </>
           )}
         </div>
       </div>
       {me?.suspended_at && (
         <p role="alert" className="bg-loss px-4 py-2 text-center text-sm text-paper">
-          Your account is suspended: you can browse, but not battle or vote. Contact the moderators if you think this is a mistake.
+          {t.nav.suspended}
         </p>
       )}
     </header>

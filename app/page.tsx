@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import { flagEmoji } from '@/lib/format';
 import BadgeChip from '@/components/badges/BadgeChip';
+import { getT } from '@/lib/i18n/server';
 import type { BattleWithPlayers, DirectoryEntry } from '@/lib/types';
 
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
@@ -10,6 +11,7 @@ const SELECT = `*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), op
 
 export default async function Home() {
   const supabase = await createClient();
+  const { t } = await getT();
   const [{ data: { user } }, live, voting, top] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('battles').select(SELECT).in('mode', ['live', 'stage']).in('status', ['active', 'live']).order('starts_at').limit(6),
@@ -24,7 +26,7 @@ export default async function Home() {
     <section className="grid gap-4">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="text-2xl font-bold [font-stretch:112%]">{title}</h2>
-        <Link href={href} className="text-sm text-muted underline-offset-4 hover:underline">See all</Link>
+        <Link href={href} className="text-sm text-muted underline-offset-4 hover:underline">{t.home.seeAll}</Link>
       </div>
       {items.length ? (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -40,31 +42,30 @@ export default async function Home() {
     <main className="mx-auto grid max-w-6xl gap-14 px-4 py-12 sm:px-6">
       <section className="grid gap-5">
         <h1 className="handle max-w-[14ch] text-[clamp(2.75rem,8vw,6rem)] leading-[0.95]">
-          1v1 beatbox battles. Every sound intact.
+          {t.home.title}
         </h1>
         <p className="max-w-[56ch] text-lg text-muted">
-          Record in full quality, battle anyone in the world on your own time or live, and let the community judge.
-          Every vote is public and every battle moves your rating.
+          {t.home.lead}
         </p>
         <div className="flex flex-wrap gap-3">
           {user ? (
-            <Link href="/battles/new" className="rounded-full bg-ink px-6 py-3 text-paper">Start a battle</Link>
+            <Link href="/battles/new" className="rounded-full bg-ink px-6 py-3 text-paper">{t.nav.startBattle}</Link>
           ) : (
             <>
-              <Link href="/signup" className="rounded-full bg-ink px-6 py-3 text-paper">Create your profile</Link>
-              <Link href="/battles?tab=voting" className="rounded-full border border-line px-6 py-3">Listen and vote</Link>
+              <Link href="/signup" className="rounded-full bg-ink px-6 py-3 text-paper">{t.home.createProfile}</Link>
+              <Link href="/battles?tab=voting" className="rounded-full border border-line px-6 py-3">{t.home.listenVote}</Link>
             </>
           )}
         </div>
       </section>
 
-      {section('Live and coming up', '/battles?tab=live', liveBattles, 'No live battles scheduled. Start one and pick a time.')}
-      {section('Vote now', '/battles?tab=voting', votingBattles, 'No battles are waiting for votes right now.')}
+      {section(t.home.live, '/battles?tab=live', liveBattles, t.home.liveEmpty)}
+      {section(t.home.vote, '/battles?tab=voting', votingBattles, t.home.voteEmpty)}
 
       <section className="grid gap-4">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-2xl font-bold [font-stretch:112%]">Top of the board</h2>
-          <Link href="/ranking" className="text-sm text-muted underline-offset-4 hover:underline">Full ranking</Link>
+          <h2 className="text-2xl font-bold [font-stretch:112%]">{t.home.top}</h2>
+          <Link href="/ranking" className="text-sm text-muted underline-offset-4 hover:underline">{t.home.fullRanking}</Link>
         </div>
         {leaders.length ? (
           <ol className="grid border-t-2 border-ink">
@@ -80,7 +81,7 @@ export default async function Home() {
             ))}
           </ol>
         ) : (
-          <p className="rounded-2xl border border-dashed border-line p-6 text-muted">The board fills up after the first finished battles.</p>
+          <p className="rounded-2xl border border-dashed border-line p-6 text-muted">{t.home.topEmpty}</p>
         )}
       </section>
     </main>

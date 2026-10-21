@@ -1,52 +1,56 @@
 import type { AppNotification } from '@/lib/types';
+import { getDict, type Dict } from '@/lib/i18n';
+import { LOCALE_TAG, type Locale } from '@/lib/i18n/config';
 
-const when = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-
-/** One plain sentence per notification, from the reader's point of view. */
-export function notificationText(n: AppNotification): string {
-  const who = n.actor ? `@${n.actor.username}` : 'Someone';
+/** One plain sentence per notification, from the reader's point of view, in their language. */
+export function notificationText(n: AppNotification, locale: Locale = 'en', dict?: Dict): string {
+  const t = (dict ?? getDict(locale)).notifications;
+  const when = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString(LOCALE_TAG[locale], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const who = n.actor ? `@${n.actor.username}` : t.someone;
   const d = n.data ?? {};
   switch (n.kind) {
     case 'challenge_received':
-      if (d.mode === 'stage') return `${who} challenged you to a stage battle, real time, on ${when(d.starts_at)}`;
-      return d.mode === 'live' ? `${who} challenged you to a live battle on ${when(d.starts_at)}` : `${who} challenged you to a battle`;
+      if (d.mode === 'stage') return t.challengeStage(who, when(d.starts_at));
+      return d.mode === 'live' ? t.challengeLive(who, when(d.starts_at)) : t.challenge(who);
     case 'challenge_accepted':
-      if (d.mode === 'stage') return `${who} accepted your stage battle. Be in the room before ${when(d.starts_at)}`;
-      return d.mode === 'live' ? `${who} accepted your live battle. Lock in your round before ${when(d.starts_at)}` : `${who} accepted your challenge. Your turn to open`;
+      if (d.mode === 'stage') return t.acceptedStage(who, when(d.starts_at));
+      return d.mode === 'live' ? t.acceptedLive(who, when(d.starts_at)) : t.accepted(who);
     case 'challenge_declined':
-      return `${who} declined your challenge`;
+      return t.declined(who);
     case 'your_turn':
-      return `Your turn against ${who}`;
+      return t.yourTurn(who);
     case 'live_soon':
-      return `Your battle against ${who} starts in 15 minutes. Join early with headphones`;
+      return t.liveSoon(who);
     case 'voting_open':
-      return `Voting is open on your battle with ${who}`;
+      return t.votingOpen(who);
     case 'judge_invited':
-      return `${who} invited you to judge a stage battle on ${when(d.starts_at)}`;
+      return t.judgeInvited(who, when(d.starts_at));
     case 'host_invited':
-      return `${who} asked you to host a stage battle on ${when(d.starts_at)}`;
+      return t.hostInvited(who, when(d.starts_at));
     case 'badge_earned': {
-      const where = d.event ? ` at “${d.event}”` : d.season ? ` in ${d.season}` : '';
-      return `New badge: ${d.name ?? 'a badge'}${where}`;
+      const name = d.name ?? t.aBadge;
+      if (d.event) return t.badgeAt(name, d.event);
+      if (d.season) return t.badgeIn(name, d.season);
+      return t.badge(name);
     }
     case 'event_judge_invited':
-      return `${who} invited you to judge “${d.title ?? 'an event'}”`;
+      return t.eventJudge(who, d.title ?? t.anEvent);
     case 'event_update': {
-      const t = `“${d.title ?? 'Your event'}”`;
-      if (d.what === 'eliminations_started') return `${t}: the eliminations are live now`;
-      if (d.what === 'paused') return d.next_session_at ? `${t} paused. Next session ${when(d.next_session_at)}` : `${t} paused`;
-      if (d.what === 'resumed') return `${t} is live again`;
-      if (d.what === 'judging') return `${t}: the judges are ranking the showcases`;
-      if ((d.what as string) === 'finished') return `${t} is over. See the final result`;
-      return `${t}: the official classification is out`;
+      const title = d.title ?? t.yourEvent;
+      if (d.what === 'eliminations_started') return t.eventStarted(title);
+      if (d.what === 'paused') return d.next_session_at ? t.eventPausedNext(title, when(d.next_session_at)) : t.eventPaused(title);
+      if (d.what === 'resumed') return t.eventResumed(title);
+      if (d.what === 'judging') return t.eventJudging(title);
+      if ((d.what as string) === 'finished') return t.eventFinished(title);
+      return t.eventPublished(title);
     }
     case 'battle_result': {
-      if (d.outcome === 'N') return `No votes on your battle with ${who}, so it ended without a result`;
-      if (d.outcome === 'D') return `Your battle with ${who} ended in a draw`;
-      const delta = typeof d.elo_delta === 'number' ? ` (${d.elo_delta >= 0 ? '+' : '−'}${Math.abs(d.elo_delta)} rating)` : '';
-      if (d.outcome === 'W') return d.result === 'forfeit' ? `You won against ${who} by forfeit${delta}` : `You beat ${who}${delta}`;
-      return d.forfeited_by_me ? `You lost to ${who} by forfeit${delta}` : `${who} won your battle${delta}`;
+      if (d.outcome === 'N') return t.resultNoContest(who);
+      if (d.outcome === 'D') return t.resultDraw(who);
+      const delta = typeof d.elo_delta === 'number' ? t.rating(`${d.elo_delta >= 0 ? '+' : '−'}${Math.abs(d.elo_delta)}`) : '';
+      if (d.outcome === 'W') return d.result === 'forfeit' ? t.resultWonForfeit(who, delta) : t.resultWon(who, delta);
+      return d.forfeited_by_me ? t.resultLostForfeit(who, delta) : t.resultLost(who, delta);
     }
   }
 }

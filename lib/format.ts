@@ -50,15 +50,24 @@ export function formatClock(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function formatAgo(iso: string, now = Date.now()): string {
+type TimeWords = {
+  today: string; yesterday: string; daysAgo: (n: number) => string; monthAgo: string;
+  monthsAgo: (n: number) => string; yearAgo: string; yearsAgo: (n: number) => string;
+};
+const EN_TIME: TimeWords = {
+  today: 'today', yesterday: 'yesterday', daysAgo: (n) => `${n} days ago`, monthAgo: 'a month ago',
+  monthsAgo: (n) => `${n} months ago`, yearAgo: 'a year ago', yearsAgo: (n) => `${n} years ago`,
+};
+
+export function formatAgo(iso: string, now = Date.now(), w: TimeWords = EN_TIME): string {
   const d = Math.floor((now - new Date(iso).getTime()) / 86_400_000);
-  if (d < 1) return 'today';
-  if (d === 1) return 'yesterday';
-  if (d < 30) return `${d} days ago`;
+  if (d < 1) return w.today;
+  if (d === 1) return w.yesterday;
+  if (d < 30) return w.daysAgo(d);
   const m = Math.round(d / 30.4);
-  if (m < 12) return m === 1 ? 'a month ago' : `${m} months ago`;
+  if (m < 12) return m === 1 ? w.monthAgo : w.monthsAgo(m);
   const y = Math.round(d / 365);
-  return y === 1 ? 'a year ago' : `${y} years ago`;
+  return y === 1 ? w.yearAgo : w.yearsAgo(y);
 }
 
 export const formatDate = (iso: string) =>

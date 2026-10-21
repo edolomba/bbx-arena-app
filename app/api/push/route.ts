@@ -3,6 +3,7 @@ import webpush from 'web-push';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { notificationHref, notificationText } from '@/lib/notifications';
 import type { AppNotification } from '@/lib/types';
+import { isLocale } from '@/lib/i18n/config';
 
 /**
  * Called by the database (trigger notifications_dispatch_push) for every new
@@ -37,9 +38,11 @@ export async function POST(request: Request) {
   if (!n) return NextResponse.json({ ok: true, sent: 0 });
 
   const { data: devices } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', n.user_id);
+  const { data: recipient } = await admin.from('profiles').select('locale').eq('id', n.user_id).maybeSingle();
+  const locale = isLocale(recipient?.locale) ? recipient.locale : 'en';
   const payload = JSON.stringify({
     title: 'BBX Arena',
-    body: notificationText(n as unknown as AppNotification),
+    body: notificationText(n as unknown as AppNotification, locale),
     url: notificationHref(n),
     tag: n.battle_id ?? n.event_id ?? n.id,
   });
