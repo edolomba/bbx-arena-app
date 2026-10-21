@@ -30,6 +30,9 @@ export async function POST() {
     await admin.storage.from(AUDIO_BUCKET).remove(files.slice(i, i + 500));
   }
 
+  const { data: photos } = await admin.storage.from('avatars').list(user.id);
+  if (photos?.length) await admin.storage.from('avatars').remove(photos.map((f) => `${user.id}/${f.name}`));
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
   await supabase.auth.signOut();
   if (deleteError) {

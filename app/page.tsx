@@ -42,7 +42,8 @@ export default async function Home() {
     <main className="mx-auto grid max-w-6xl gap-14 px-4 py-12 sm:px-6">
       <section className="grid gap-5">
         <h1 className="handle max-w-[14ch] text-[clamp(2.75rem,8vw,6rem)] leading-[0.95]">
-          {t.home.title}
+          {t.home.title}{' '}
+          <span className="bg-gradient-to-r from-sub to-signal bg-clip-text text-transparent">{t.home.titleAccent}</span>
         </h1>
         <p className="max-w-[56ch] text-lg text-muted">
           {t.home.lead}

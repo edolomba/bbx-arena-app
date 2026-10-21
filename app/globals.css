@@ -1,59 +1,34 @@
 @import "tailwindcss";
 
 /*
-  Palette: indigo ink on blue-grey paper. Cobalt is the signal (full-band
-  waveform, primary data); magenta is reserved for sub-bass everywhere it
-  appears, so the colour itself teaches what it means.
+  Stage palette, dark only. Near-black room, cards lit from above.
+  Magenta is the brand and still marks sub-bass in every waveform;
+  electric blue carries the full-band signal and data; gold is for the
+  number one and champions.
 */
 :root {
-  --paper: #eef0f6;
-  --surface: #ffffff;
-  --ink: #16183a;
-  --muted: #5c6080;
-  --line: #d5d8e6;
-  --signal: #2944f0;
-  --sub: #c8176b;
-  --win: #13795b;
-  --loss: #b42318;
+  --paper: #0a0a0d;
+  --surface: #141418;
+  --surface-2: #1c1c22;
+  --ink: #f3f3f6;
+  --muted: #8d8d99;
+  --line: #2a2a33;
+  --signal: #6f8cff;
+  --sub: #ff4fa3;
+  --gold: #f5b82e;
+  --win: #3ddc84;
+  --loss: #ff6060;
   --wave-signal: var(--signal);
   --wave-sub: var(--sub);
-  --wave-rest: #9ea3c0;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #13152b;
-    --surface: #1c1f3a;
-    --ink: #e8e9f6;
-    --muted: #9a9ec0;
-    --line: #2e3256;
-    --signal: #8ea0ff;
-    --sub: #ff5ca6;
-    --win: #4cc79a;
-    --loss: #ff8a7a;
-    --wave-rest: #4a4f78;
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --paper: #13152b;
-  --surface: #1c1f3a;
-  --ink: #e8e9f6;
-  --muted: #9a9ec0;
-  --line: #2e3256;
-  --signal: #8ea0ff;
-  --sub: #ff5ca6;
-  --win: #4cc79a;
-  --loss: #ff8a7a;
-  --wave-rest: #4a4f78;
+  --wave-rest: #3a3a46;
   color-scheme: dark;
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-gold: var(--gold);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
@@ -62,6 +37,7 @@
   --color-win: var(--win);
   --color-loss: var(--loss);
   --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 
 body {
@@ -89,4 +65,31 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Small uppercase labels, like a mixing desk. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* A soft stage light from above on the page background. */
+body {
+  background-image: radial-gradient(120% 60% at 50% -10%, color-mix(in srgb, var(--sub) 9%, transparent), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--sub) 45%, transparent);
+}
+
+/* Primary buttons (white on dark) pick up a pink glow on hover. */
+a.bg-ink, button.bg-ink {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+a.bg-ink:hover, button.bg-ink:not(:disabled):hover {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sub) 35%, transparent), 0 8px 30px -8px var(--sub);
 }

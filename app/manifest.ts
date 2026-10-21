@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: '1v1 beatbox battles in real studio quality.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#13152b',
-    theme_color: '#16183a',
+    background_color: '#0a0a0d',
+    theme_color: '#0a0a0d',
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },

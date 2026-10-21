@@ -21,7 +21,8 @@ export const en = {
     language: 'Language',
   },
   home: {
-    title: '1v1 beatbox battles. Every sound intact.',
+    title: '1v1 beatbox battles.',
+    titleAccent: 'Every sound intact.',
     lead: 'Record in full quality, battle anyone in the world on your own time or live, and let the community judge. Every vote is public and every battle moves your rating.',
     createProfile: 'Create your profile',
     listenVote: 'Listen and vote',
@@ -893,6 +894,18 @@ export const en = {
     eventBy: (h: string, max: number) => ` by @${h}, up to ${max}`,
     approve: 'Approve as Ranked',
     makeCasual: 'Make it Casual',
+  },
+  avatar: {
+    title: 'Profile photo',
+    hint: 'A square crop of your photo is used everywhere: battles, ranking, events. JPG, PNG or WebP.',
+    choose: 'Choose a photo',
+    change: 'Change photo',
+    remove: 'Remove photo',
+    uploading: 'Uploading…',
+    saved: 'Photo updated.',
+    tooBig: 'That image is too large. Pick one under 15 MB.',
+    notImage: 'That file isn’t an image.',
+    failed: 'The photo wasn’t saved. Try again.',
   },
   time: {
     today: 'today',

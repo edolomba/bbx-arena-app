@@ -17,7 +17,8 @@ export const it: Dict = {
   },
   footer: { micCheck: 'Test del microfono', terms: 'Termini', privacy: 'Privacy', contact: 'Contatti', language: 'Lingua' },
   home: {
-    title: 'Battle di beatbox 1v1. Ogni suono intatto.',
+    title: 'Battle di beatbox 1v1.',
+    titleAccent: 'Ogni suono intatto.',
     lead: 'Registra in qualità piena, sfida chiunque nel mondo con i tuoi tempi o dal vivo, e lascia giudicare la community. Ogni voto è pubblico e ogni battle muove il tuo rating.',
     createProfile: 'Crea il tuo profilo',
     listenVote: 'Ascolta e vota',
@@ -889,6 +890,18 @@ export const it: Dict = {
     eventBy: (h, max) => ` di @${h}, fino a ${max}`,
     approve: 'Approva come Ranked',
     makeCasual: 'Rendilo Casual',
+  },
+  avatar: {
+    title: 'Foto profilo',
+    hint: 'Un ritaglio quadrato della tua foto compare ovunque: battle, classifica, eventi. JPG, PNG o WebP.',
+    choose: 'Scegli una foto',
+    change: 'Cambia foto',
+    remove: 'Rimuovi foto',
+    uploading: 'Caricamento…',
+    saved: 'Foto aggiornata.',
+    tooBig: 'Questa immagine è troppo grande. Scegline una sotto i 15 MB.',
+    notImage: 'Questo file non è un’immagine.',
+    failed: 'La foto non è stata salvata. Riprova.',
   },
   time: {
     today: 'oggi',

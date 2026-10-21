@@ -22,16 +22,8 @@ export async function FormStrip({ games }: { games: ProfileBattle[] }) {
   );
 }
 
-export function Avatar({ username, url, size = 'md' }: { username: string; url: string | null; size?: 'md' | 'lg' }) {
-  const cls = size === 'lg' ? 'size-20 text-3xl' : 'size-13 text-xl';
-  // eslint-disable-next-line @next/next/no-img-element
-  if (url) return <img src={url} alt="" className={`${cls} shrink-0 rounded-full object-cover`} />;
-  return (
-    <span aria-hidden="true" className={`handle grid shrink-0 place-items-center rounded-full bg-ink text-paper ${cls}`}>
-      {username.slice(0, 1).toUpperCase()}
-    </span>
-  );
-}
+import Avatar from '@/components/Avatar';
+export { Avatar };
 
 /** Directory card: rating, record, recent form and the last battle. */
 export default async function BeatboxerCard({ entry, recent }: { entry: DirectoryEntry; recent: ProfileBattle[] }) {

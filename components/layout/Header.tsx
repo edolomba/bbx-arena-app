@@ -16,7 +16,7 @@ export default async function Header() {
 
   const link = 'rounded-full px-3 py-1.5 text-muted hover:text-ink';
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-paper">
+    <header className="sticky top-0 z-20 border-b border-line bg-paper/80 backdrop-blur-md">
       <div className="mx-auto flex h-15 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="handle mr-2 text-lg whitespace-nowrap">
           BBX Arena<span className="text-sub">.</span>

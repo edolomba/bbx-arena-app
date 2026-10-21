@@ -13,6 +13,7 @@ import LiveRoom from './LiveRoom';
 import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
 import BadgeChip from '@/components/badges/BadgeChip';
+import Avatar from '@/components/Avatar';
 import { useI18n } from '@/components/i18n/I18nProvider';
 import { flagEmoji, intervalHours, signed } from '@/lib/format';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
@@ -38,7 +39,8 @@ function PlayerHeader({ p, align, isWinner, eloDelta }: {
 }) {
   const tb = useI18n().t.battle;
   return (
-    <div className={`grid min-w-0 gap-1 ${align === 'end' ? 'md:justify-items-end md:text-right' : ''}`}>
+    <div className={`grid min-w-0 gap-2 ${align === 'end' ? 'md:justify-items-end md:text-right' : ''}`}>
+      {p && <Avatar username={p.username} url={p.avatar_url} size="lg" ring={isWinner ? 'gold' : 'muted'} />}
       <h2 className="handle text-[clamp(1.75rem,5vw,3.25rem)] leading-none break-all">
         {p ? (
           <Link href={`/beatboxers/${p.username}`} className="underline-offset-4 hover:underline">@{p.username}</Link>
