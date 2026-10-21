@@ -10,6 +10,7 @@ import EventStage from './EventStage';
 import JudgeRanking from './JudgeRanking';
 import StandingsTable from './StandingsTable';
 import Bracket, { type MatchRow, type SwissRow } from './Bracket';
+import SmokeBoard, { type SmokeRow } from './SmokeBoard';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
 
 interface Props {
@@ -23,12 +24,13 @@ interface Props {
   currentUserId: string | null;
   matches: MatchRow[];
   swiss: SwissRow[];
+  smoke: SmokeRow[];
   stage: React.ReactNode;
 }
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId, matches, swiss, stage }: Props) {
+export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId, matches, swiss, smoke, stage }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [busy, setBusy] = useState(false);
@@ -45,6 +47,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_showcases', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'elimination_submissions', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'event_matches', filter: `event_id=eq.${event.id}` }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_smoke', filter: `event_id=eq.${event.id}` }, () => router.refresh())
       .subscribe();
     return () => { void supabase.removeChannel(ch); };
   }, [supabase, event.id, router]);
@@ -93,7 +96,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
         <h1 className="handle text-[clamp(2.2rem,6vw,4rem)] leading-none">{event.title}</h1>
         {event.description && <p className="max-w-[68ch] whitespace-pre-wrap">{event.description}</p>}
         <p className="text-sm text-muted">
-          Up to {event.max_participants} beatboxers, top {event.advance_count} go to the {event.main_format === 'swiss' ? 'Swiss rounds' : 'knockout'}.
+          Up to {event.max_participants} beatboxers, top {event.advance_count} go to {event.main_format === 'swiss' ? 'the Swiss rounds' : event.main_format === 'seven_to_smoke' ? `7 to Smoke (first to ${event.smoke_target ?? 7} points)` : 'the knockout'}.
           {' '}Showcases {event.showcase_seconds} s, battles {event.battle_rounds === 1 ? '1 round' : '2 rounds'} of {event.battle_round_seconds} s.
           {' '}Judges: {activeJudges.map((j) => `@${j.judge?.username}`).join(', ')}.
         </p>
@@ -135,7 +138,14 @@ export default function EventView({ event, judges, entries, showcases, submissio
             <div className="grid justify-items-start gap-2 rounded-2xl border-2 border-ink p-5">
               <h3 className="font-bold">Host</h3>
               <p className="text-sm text-muted">Start when everyone is ready. The running order is drawn at random, and the room opens for everyone.</p>
-              <button disabled={busy} onClick={() => act('host_start_eliminations')} className={`${btn} bg-ink text-paper`}>Start the eliminations now</button>
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy} onClick={() => act('host_start_eliminations')} className={`${btn} bg-ink text-paper`}>Start the eliminations now</button>
+                {event.main_format === 'seven_to_smoke' && registered.length >= 3 && registered.length <= 8 && (
+                  <button disabled={busy} onClick={() => act('host_skip_eliminations')} className={`${btn} border border-line`}>
+                    Skip the eliminations: straight to 7 to Smoke
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </section>
@@ -236,7 +246,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
               <h2 className="mr-auto text-2xl font-bold [font-stretch:112%]">Main stage</h2>
               {isHost && matches.length === 0 && (
                 <button disabled={busy} onClick={() => act('host_build_bracket')} className={`${btn} bg-ink text-paper`}>
-                  Build the {event.main_format === 'swiss' ? 'Swiss rounds' : 'bracket'}
+                  {event.main_format === 'seven_to_smoke' ? 'Start 7 to Smoke' : `Build the ${event.main_format === 'swiss' ? 'Swiss rounds' : 'bracket'}`}
                 </button>
               )}
               {isHost && (event.live
@@ -250,14 +260,18 @@ export default function EventView({ event, judges, entries, showcases, submissio
               {stage}
             </div>
           )}
-          {matches.length > 0 && (
+          {event.main_format === 'seven_to_smoke' && matches.length > 0 && (
+            <SmokeBoard eventId={event.id} isHost={isHost} live={event.live} target={event.smoke_target ?? 7} smoke={smoke}
+              matches={matches} names={names} currentBattleId={(event as EventRow & { current_battle_id?: string | null }).current_battle_id ?? null} />
+          )}
+          {event.main_format !== 'seven_to_smoke' && matches.length > 0 && (
             <Bracket eventId={event.id} isHost={isHost} live={event.live} mainFormat={event.main_format}
               matches={matches} swiss={swiss} names={names} currentBattleId={(event as EventRow & { current_battle_id?: string | null }).current_battle_id ?? null} />
           )}
-          <details className="grid gap-4" open={event.status === 'main' && matches.length === 0}>
+          {standings.length > 0 && <details className="grid gap-4" open={event.status === 'main' && matches.length === 0}>
             <summary className="cursor-pointer text-lg font-bold [font-stretch:112%]">Eliminations: official classification</summary>
             <div className="mt-4"><StandingsTable rows={standings} names={names} advanceCount={event.advance_count} /></div>
-          </details>
+          </details>}
         </section>
       )}
     </article>

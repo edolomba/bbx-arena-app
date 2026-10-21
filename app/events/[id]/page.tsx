@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import EventView from '@/components/events/EventView';
 import BattleView from '@/components/battle/BattleView';
 import type { MatchRow, SwissRow } from '@/components/events/Bracket';
+import type { SmokeRow } from '@/components/events/SmokeBoard';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, Submission, Vote } from '@/lib/types';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
 
@@ -29,10 +30,11 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     myRanking = (data ?? []).map((r) => r.profile_id);
   }
 
-  const [{ data: matches }, { data: swiss }] = await Promise.all([
+  const [{ data: matches }, { data: swiss }, { data: smoke }] = await Promise.all([
     supabase.from('event_matches').select('*').eq('event_id', id).order('round').order('slot'),
     event.main_format === 'swiss' && ['main', 'finished'].includes(event.status)
       ? supabase.rpc('swiss_standings', { p_event: id }) : Promise.resolve({ data: [] }),
+    supabase.from('event_smoke').select('profile_id, points, queue_pos').eq('event_id', id),
   ]);
 
   // The battle on stage right now, shown inside the event page.
@@ -59,6 +61,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     <EventView
       matches={(matches ?? []) as MatchRow[]}
       swiss={(swiss ?? []) as SwissRow[]}
+      smoke={(smoke ?? []) as SmokeRow[]}
       stage={stage}
       event={event as EventRow}
       judges={(judges ?? []) as unknown as EventJudge[]}

@@ -36,7 +36,7 @@ export default function CreateEventForm() {
   const [description, setDescription] = useState('');
   const [maxP, setMaxP] = useState(16);
   const [advance, setAdvance] = useState(8);
-  const [mainFormat, setMainFormat] = useState<'knockout' | 'swiss'>('knockout');
+  const [mainFormat, setMainFormat] = useState<'knockout' | 'swiss' | 'seven_to_smoke'>('knockout');
   const [judgeCount, setJudgeCount] = useState(3);
   const [judges, setJudges] = useState(['', '', '', '', '']);
   const [showcase, setShowcase] = useState(60);
@@ -66,7 +66,7 @@ export default function CreateEventForm() {
     }
   }
 
-  const advanceOptions = [4, 8, 16, 32].filter((n) => n < maxP);
+  const advanceOptions = mainFormat === 'seven_to_smoke' ? [8] : [4, 8, 16, 32].filter((n) => n < maxP);
 
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-7">
@@ -81,12 +81,15 @@ export default function CreateEventForm() {
 
       <Seg name="max" legend="Beatboxers in the eliminations (maximum)" value={maxP}
         onChange={(v) => { setMaxP(v); if (advance >= v) setAdvance([4, 8, 16, 32].filter((n) => n < v).pop() ?? 4); }}
-        options={[8, 16, 24, 32, 48, 64].map((n) => ({ value: n, label: String(n) }))} />
+        options={[8, 16, 24, 32, 48, 64].filter((n) => mainFormat !== 'seven_to_smoke' || n > 8).map((n) => ({ value: n, label: String(n) }))} />
+      <Seg name="main" legend="Format" value={mainFormat}
+        onChange={(v) => { setMainFormat(v); if (v === 'seven_to_smoke') { setAdvance(8); if (maxP <= 8) setMaxP(16); } }}
+        options={[{ value: 'knockout', label: 'Knockout' }, { value: 'swiss', label: 'Swiss rounds' }, { value: 'seven_to_smoke', label: '7 to Smoke' }]}
+        note={mainFormat === 'seven_to_smoke'
+          ? 'The top 8 line up: winner stays on and scores a point, loser goes to the back. First to 7 wins. With 8 or fewer entrants you can skip the eliminations.'
+          : 'Both end with a small final (3rd place) and a final.'} />
       <Seg name="adv" legend="How many go through" value={advance} onChange={setAdvance}
         options={advanceOptions.map((n) => ({ value: n, label: `Top ${n}` }))} />
-      <Seg name="main" legend="After the eliminations" value={mainFormat} onChange={setMainFormat}
-        options={[{ value: 'knockout', label: 'Knockout' }, { value: 'swiss', label: 'Swiss rounds' }]}
-        note="Both end with a small final (3rd place) and a final." />
       <Seg name="reg" legend="Registration stays open" value={regHours} onChange={setRegHours}
         options={[{ value: 24, label: '1 day' }, { value: 72, label: '3 days' }, { value: 168, label: '1 week' }, { value: 336, label: '2 weeks' }]} />
 

@@ -228,7 +228,8 @@ export interface EventRow {
   approved_at: string | null;
   max_participants: number;
   advance_count: number;
-  main_format: 'knockout' | 'swiss';
+  main_format: 'knockout' | 'swiss' | 'seven_to_smoke';
+  smoke_target?: number;
   judge_count: number;
   showcase_seconds: number;
   battle_round_seconds: number;

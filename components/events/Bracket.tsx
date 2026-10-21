@@ -8,7 +8,7 @@ import { eventRpc } from '@/lib/supabase/events';
 
 export interface MatchRow {
   id: string;
-  phase: 'swiss' | 'knockout' | 'small_final';
+  phase: 'swiss' | 'knockout' | 'small_final' | 'smoke';
   round: number;
   slot: number;
   a_id: string | null;
