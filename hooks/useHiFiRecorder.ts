@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RECORDER_WORKLET_SOURCE } from '@/lib/audio/recorder-worklet';
-import { encodeWav, mergeChunks } from '@/lib/audio/wav';
+import { mergeChunks } from '@/lib/audio/wav';
+import { encodeTakeFlac } from '@/lib/audio/encode';
 import { analyzeAudio } from '@/lib/audio/analyze';
 import type { PreparedTake } from '@/lib/types';
 
@@ -238,15 +239,15 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
       const buffer = new AudioBuffer({ length: channels[0].length, numberOfChannels: channels.length, sampleRate: sr });
       channels.forEach((c, i) => buffer.copyToChannel(c, i));
 
-      const blob = encodeWav(channels, sr, bitDepth);
-      const analysis = await analyzeAudio(buffer);
+      // Lossless FLAC: identical samples to a WAV, about half the storage.
+      const [blob, analysis] = await Promise.all([encodeTakeFlac(channels, sr, bitDepth), analyzeAudio(buffer)]);
 
       const result: PreparedTake = {
         blob,
-        fileExt: 'wav',
-        contentType: 'audio/wav',
+        fileExt: 'flac',
+        contentType: 'audio/flac',
         analysis,
-        sourceCodec: bitDepth === 24 ? 'pcm_s24le' : 'pcm_s16le',
+        sourceCodec: 'flac',
         isLossless: true,
         sampleRate: sr,
         bitDepth,
