@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { createBattle } from '@/lib/supabase/battles';
 import { LIVE_STARTS, ROUND_DURATIONS, VOTING_HOURS } from '@/lib/constants';
-import { hoursText } from '@/lib/format';
+import { useI18n } from '@/components/i18n/I18nProvider';
 
 function Segmented<T extends string | number>({
   name, legend, options, value, onChange, note,
@@ -37,12 +37,13 @@ function Segmented<T extends string | number>({
 function HandleInput({ label, value, onChange, required, hint }: {
   label: string; value: string; onChange: (v: string) => void; required?: boolean; hint?: string;
 }) {
+  const { t } = useI18n();
   return (
     <label className="grid gap-1 text-sm">
       <span className="text-muted">{label}</span>
       <div className="flex max-w-sm items-center rounded-lg border border-line bg-surface focus-within:outline-2 focus-within:outline-signal">
         <span className="pl-3 text-muted">@</span>
-        <input value={value} onChange={(e) => onChange(e.target.value.replace(/^@/, '').trim())} placeholder="handle"
+        <input value={value} onChange={(e) => onChange(e.target.value.replace(/^@/, '').trim())} placeholder={t.create.handlePlaceholder}
           required={required} className="w-full bg-transparent px-1 py-2.5 text-base outline-none" />
       </div>
       {hint && <span className="text-muted">{hint}</span>}
@@ -55,6 +56,7 @@ type Mode = 'async' | 'live' | 'stage';
 export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOpponent?: string }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const c = useI18n().t.create;
   const [mode, setMode] = useState<Mode>('async');
   const [who, setWho] = useState<'named' | 'open'>(defaultOpponent ? 'named' : 'named');
   const [opponent, setOpponent] = useState(defaultOpponent);
@@ -87,21 +89,21 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
       });
       router.push(`/battles/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The battle wasn’t created. Try again.');
+      setError(err instanceof Error ? err.message : c.failed);
       setBusy(false);
     }
   }
 
   const modes = [
-    { value: 'async' as const, title: 'Take turns', text: 'Each of you records on your own time. People listen and vote whenever they like.' },
-    { value: 'live' as const, title: 'Live premiere', text: 'You both record before a set time. The rounds premiere together for everyone in the room.' },
-    { value: 'stage' as const, title: 'Stage, real time', text: 'Mic to mic, run by a host, judged on the spot. Everyone hears it as it happens, in full quality.' },
+    { value: 'async' as const, title: c.asyncTitle, text: c.asyncText },
+    { value: 'live' as const, title: c.liveTitle, text: c.liveText },
+    { value: 'stage' as const, title: c.stageTitle, text: c.stageText },
   ];
 
   return (
     <form onSubmit={onSubmit} className="grid max-w-2xl gap-7">
       <fieldset className="grid gap-2">
-        <legend className="mb-2 text-sm text-muted">Format</legend>
+        <legend className="mb-2 text-sm text-muted">{c.format}</legend>
         <div className="grid gap-3 sm:grid-cols-3">
           {modes.map((m) => (
             <div key={m.value} className="grid">
@@ -116,71 +118,71 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
         </div>
       </fieldset>
 
-      <Segmented name="who" legend="Opponent" value={who} onChange={setWho}
-        options={[{ value: 'named', label: 'Challenge a beatboxer' }, { value: 'open', label: 'Open to anyone' }]}
-        note={who === 'open' ? 'Anyone can take the battle. The first to accept becomes your opponent.' : undefined} />
-      {who === 'named' && <HandleInput label="Beatboxer to challenge" value={opponent} onChange={setOpponent} required />}
+      <Segmented name="who" legend={c.opponent} value={who} onChange={setWho}
+        options={[{ value: 'named', label: c.challengeSomeone }, { value: 'open', label: c.openToAnyone }]}
+        note={who === 'open' ? c.openNote : undefined} />
+      {who === 'named' && <HandleInput label={c.whoToChallenge} value={opponent} onChange={setOpponent} required />}
 
-      <Segmented name="round" legend="Round length" value={roundSeconds} onChange={setRoundSeconds}
-        options={ROUND_DURATIONS.map((s) => ({ value: s, label: `${s} seconds` }))} />
+      <Segmented name="round" legend={c.roundLength} value={roundSeconds} onChange={setRoundSeconds}
+        options={ROUND_DURATIONS.map((s) => ({ value: s, label: c.seconds(s) }))} />
 
       {mode === 'stage' && (
-        <Segmented name="rounds" legend="Rounds each" value={rounds} onChange={setRounds}
-          options={[{ value: 1, label: '1 round' }, { value: 2, label: '2 rounds' }]}
-          note="The host calls the rounds: you open, your opponent answers." />
+        <Segmented name="rounds" legend={c.roundsEach} value={rounds} onChange={setRounds}
+          options={[{ value: 1, label: c.rounds(1) }, { value: 2, label: c.rounds(2) }]}
+          note={c.roundsNote} />
       )}
 
       {mode !== 'async' ? (
-        <Segmented name="start" legend="Starts" value={startsIn} onChange={setStartsIn}
-          options={LIVE_STARTS.map((s) => ({ value: s.minutes, label: s.label }))}
+        <Segmented name="start" legend={c.starts} value={startsIn} onChange={setStartsIn}
+          options={LIVE_STARTS.map((s) => ({ value: s.minutes, label: ({ 15: c.in15, 60: c.in60, 360: c.in360, 1440: c.in1440 } as Record<number, string>)[s.minutes] ?? s.label }))}
           note={mode === 'stage'
-            ? 'Your opponent has to accept before the start. Everyone joins the room a few minutes early with headphones.'
-            : 'Your opponent has to accept, and both rounds have to be in, before the start. A missing round counts as a forfeit.'} />
+            ? c.stageStartNote
+            : c.liveStartNote} />
       ) : (
-        <p className="text-sm text-muted">You record first. Each battler then has 24 hours to respond.</p>
+        <p className="text-sm text-muted">{c.asyncNote}</p>
       )}
 
       {mode === 'stage' && (
         <section className="grid gap-6 rounded-2xl border border-line p-5">
-          <h2 className="text-lg font-bold [font-stretch:112%]">Host and judges</h2>
+          <h2 className="text-lg font-bold [font-stretch:112%]">{c.hostAndJudges}</h2>
 
-          <Segmented name="host" legend="Who hosts?" value={hostMode} onChange={setHostMode}
-            options={[{ value: 'other', label: 'Someone else' }, { value: 'me', label: 'I’ll host' }]}
+          <Segmented name="host" legend={c.whoHosts} value={hostMode} onChange={setHostMode}
+            options={[{ value: 'other', label: c.someoneElse }, { value: 'me', label: c.iHost }]}
             note={hostMode === 'me'
-              ? 'If you host your own battle it’s Casual: no rating and no ranking points.'
-              : 'The host starts each round and the voting. A third-party host keeps the battle Ranked.'} />
-          {hostMode === 'other' && <HandleInput label="Host" value={host} onChange={setHost} required />}
+              ? c.iHostNote
+              : c.otherHostNote} />
+          {hostMode === 'other' && <HandleInput label={c.host} value={host} onChange={setHost} required />}
 
-          <Segmented name="judges" legend="Judges" value={judgeCount} onChange={setJudgeCount}
-            options={[{ value: 3, label: '3 judges' }, { value: 5, label: '5 judges' }, { value: 0, label: 'No judges' }]}
-            note={judgeCount === 0 ? 'Without judges, the audience votes after the battle, during the voting window below.' : 'Majority wins. Judges can’t battle or host.'} />
+          <Segmented name="judges" legend={c.judges} value={judgeCount} onChange={setJudgeCount}
+            options={[{ value: 3, label: c.judgesN(3) }, { value: 5, label: c.judgesN(5) }, { value: 0, label: c.noJudges }]}
+            note={judgeCount === 0 ? c.noJudgesNote : c.judgesNote} />
           {judgeCount > 0 && (
             <div className="grid gap-3 sm:grid-cols-2">
               {Array.from({ length: judgeCount }, (_, i) => (
-                <HandleInput key={i} label={`Judge ${i + 1}`} value={judges[i]} required
+                <HandleInput key={i} label={c.judgeN(i + 1)} value={judges[i]} required
                   onChange={(v) => setJudges((js) => js.map((x, j) => (j === i ? v : x)))} />
               ))}
-              <HandleInput label="Reserve judge (optional)" value={reserve} onChange={setReserve}
-                hint="Votes only in place of a judge who doesn’t." />
+              <HandleInput label={c.reserve} value={reserve} onChange={setReserve}
+                hint={c.reserveHint} />
             </div>
           )}
           {judgeCount > 0 && (
-            <Segmented name="jsec" legend="Time for judges to vote" value={judgeSeconds} onChange={setJudgeSeconds}
-              options={[10, 15, 30].map((s) => ({ value: s, label: `${s} seconds` }))} />
+            <Segmented name="jsec" legend={c.judgeTime} value={judgeSeconds} onChange={setJudgeSeconds}
+              options={[10, 15, 30].map((s) => ({ value: s, label: c.seconds(s) }))} />
           )}
         </section>
       )}
 
       {(mode !== 'stage' || judgeCount === 0) && (
-        <Segmented name="vote" legend="Voting stays open" value={votingHours} onChange={setVotingHours}
-          options={VOTING_HOURS.map((h) => ({ value: h, label: hoursText(h) }))}
-          note={mode === 'async' ? 'Counted from the moment both rounds are in.' : 'Counted from the moment the last round ends.'} />
+        <Segmented name="vote" legend={c.votingOpen} value={votingHours} onChange={setVotingHours}
+          options={VOTING_HOURS.map((h) => ({ value: h, label: c.hours(h) }))}
+          note={mode === 'async' ? c.votingAsyncNote : c.votingLiveNote} />
       )}
 
       {error && <p role="alert" className="text-loss">{error}</p>}
       <div className="flex flex-wrap gap-3">
         <button disabled={busy} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-          {busy ? 'Creating…' : who === 'open' ? 'Post open battle' : mode === 'async' ? 'Send challenge' : `Schedule ${mode === 'stage' ? 'stage' : 'live'} battle`}
+          {busy ? c.creating : who === 'open' ? c.postOpen : mode === 'async' ? c.sendChallenge : mode === 'stage' ? c.scheduleStage : c.scheduleLive}
         </button>
       </div>
     </form>

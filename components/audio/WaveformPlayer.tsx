@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/I18nProvider';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { WaveformData } from '@/lib/types';
 import { announcePlay, dbToGain, getPlaybackContext, onOtherPlay } from '@/lib/audio/playback-bus';
@@ -57,6 +58,7 @@ export default function WaveformPlayer({
   label,
   onListenProgress,
 }: Props) {
+  const { t } = useI18n();
   const id = useId();
   const audioRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -226,7 +228,7 @@ export default function WaveformPlayer({
       <button
         type="button"
         onClick={toggle}
-        aria-label={playing ? `Pause ${name}` : `Play ${name}`}
+        aria-label={playing ? t.player.pause(name) : t.player.play(name)}
         className={`grid shrink-0 place-items-center rounded-full bg-ink text-paper outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal ${
           compact ? 'size-9' : 'size-12'
         }`}
@@ -246,7 +248,7 @@ export default function WaveformPlayer({
       <div
         role="slider"
         tabIndex={0}
-        aria-label={`Seek ${name}`}
+        aria-label={t.player.seek(name)}
         aria-valuemin={0}
         aria-valuemax={Math.round(duration)}
         aria-valuenow={second}

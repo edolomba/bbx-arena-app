@@ -9,8 +9,9 @@ import { announcePlay, dbToGain, getPlaybackContext } from '@/lib/audio/playback
 import { drawWaveform } from '@/lib/audio/draw';
 import { useServerClock } from '@/hooks/useServerClock';
 import AudioRecorder from '@/components/audio/AudioRecorder';
-import { formatClock, formatTime, hoursText, intervalHours } from '@/lib/format';
+import { formatClock, formatTime, intervalHours } from '@/lib/format';
 import { LIVE_GAP_MS, LIVE_INTRO_MS } from '@/lib/constants';
+import { useI18n } from '@/components/i18n/I18nProvider';
 import type { BattleWithPlayers, PreparedTake, Submission } from '@/lib/types';
 
 interface Props {
@@ -35,6 +36,8 @@ interface Slot {
  * is the user gesture browsers require before sound can start on its own.
  */
 export default function LiveRoom({ battle, submissions, currentUserId, onHeard }: Props) {
+  const { t: dict } = useI18n();
+  const tl = dict.live;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const clock = useServerClock();
@@ -125,7 +128,7 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
           sources.push(src);
         });
       } catch {
-        if (!cancelled) setLoadError('The rounds didn’t load. Check your connection; replays open when voting starts.');
+        if (!cancelled) setLoadError(tl.loadFailed);
       }
     })();
 
@@ -166,7 +169,7 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
   }, []);
 
   const handleSubmit = useCallback(async (take: PreparedTake) => {
-    if (!currentUserId) throw new Error('Log in to submit your round.');
+    if (!currentUserId) throw new Error(tl.loginToSubmit);
     await submitTake(supabase, battle.id, currentUserId, take);
     router.refresh();
   }, [supabase, battle.id, currentUserId, router]);
@@ -191,7 +194,7 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
       <p className="flex flex-wrap items-center gap-x-2 text-lg">
         <span className={`inline-flex items-center gap-2 font-semibold ${phase === 'live' ? 'text-sub' : ''}`}>
           <span className={`size-2.5 rounded-full ${phase === 'live' ? 'animate-pulse bg-sub' : 'bg-muted'}`} aria-hidden="true" />
-          {phase === 'live' ? 'Live now' : 'Live battle'}
+          {phase === 'live' ? tl.liveNow : tl.liveBattle}
         </span>
         <span className="text-muted">,</span>
         <span className="num">{audience}</span>
@@ -199,20 +202,19 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
       </p>
 
       {phase === 'lobby' && (
-        <section className="grid justify-items-start gap-3" aria-label="Countdown">
-          <p className="text-lg text-muted">Battle starts in</p>
+        <section className="grid justify-items-start gap-3" aria-label={tl.countdown}>
+          <p className="text-lg text-muted">{tl.startsIn}</p>
           <p className="num text-[clamp(5rem,19vw,11rem)] leading-[0.85] [font-stretch:70%]" suppressHydrationWarning>
             {formatClock(startsAt - t)}
           </p>
           <p className="max-w-[54ch] text-lg">
-            Both rounds play for everyone at the same moment. Listen live, then judge. Voting stays open{' '}
-            {hoursText(votingHours)} after the last round.
+            {tl.intro(dict.battle.hours(votingHours))}
           </p>
           {joined ? (
-            <p className="border-t-2 border-sub pt-2 text-lg">You’re in. Keep this tab open with your sound on.</p>
+            <p className="border-t-2 border-sub pt-2 text-lg">{tl.youreIn}</p>
           ) : (
             <button onClick={enter} className="rounded-full bg-ink px-7 py-3.5 text-lg text-paper">
-              {isParticipant ? 'Enter the room' : 'Enter to listen and judge'}
+              {isParticipant ? tl.enterRoom : tl.enterJudge}
             </button>
           )}
         </section>
@@ -220,69 +222,69 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
 
       {phase === 'starting' && (
         <section className="grid gap-2">
-          <p className="text-[clamp(2rem,6vw,3.6rem)] leading-none font-bold">Starting…</p>
-          <p className="text-muted">Loading the rounds for everyone in the room.</p>
+          <p className="text-[clamp(2rem,6vw,3.6rem)] leading-none font-bold">{tl.starting}</p>
+          <p className="text-muted">{tl.loading}</p>
           {!joined && (
             <button onClick={enter} className="justify-self-start rounded-full bg-ink px-7 py-3.5 text-lg text-paper">
-              Enter to listen and judge
+              {tl.enterJudge}
             </button>
           )}
         </section>
       )}
 
       {phase === 'live' && (
-        <section className="grid justify-items-start gap-3" aria-label="Stage">
-          <p className="text-lg text-muted">{cur ? 'Now playing' : next ? 'Up next' : 'That was the last round'}</p>
+        <section className="grid justify-items-start gap-3" aria-label={dict.stage.stage}>
+          <p className="text-lg text-muted">{cur ? tl.nowPlaying : next ? tl.upNext : tl.lastRound}</p>
           <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">
-            {cur ? `@${cur.username}` : next ? `@${next.username}` : 'Voting opens now'}
+            {cur ? `@${cur.username}` : next ? `@${next.username}` : tl.votingOpens}
           </h2>
           <canvas ref={canvasRef} className="block h-24 w-full" aria-hidden="true" />
           <p className="num text-muted">
-            {cur ? `${formatTime((t - cur.at) / 1000)} / ${formatTime(cur.dur / 1000)}` : next ? `Starts in ${formatClock(next.at - t)}` : ''}
+            {cur ? `${formatTime((t - cur.at) / 1000)} / ${formatTime(cur.dur / 1000)}` : next ? tl.startsInClock(formatClock(next.at - t)) : ''}
           </p>
           {joined ? (
             <div className="flex flex-wrap items-center gap-3">
               <button onClick={() => setMuted((m) => !m)} aria-pressed={muted} className="rounded-full border border-line px-5 py-2.5">
-                {muted ? 'Unmute' : 'Mute'}
+                {muted ? tl.unmute : tl.mute}
               </button>
-              <span className="text-sm text-muted">Levels are matched for everyone, so nobody wins on volume.</span>
+              <span className="text-sm text-muted">{tl.levelsMatched}</span>
             </div>
           ) : (
             <div className="grid justify-items-start gap-2">
-              <button onClick={enter} className="rounded-full bg-ink px-7 py-3.5 text-lg text-paper">Join now</button>
-              <p className="text-sm text-muted">You’ll hear the rest live. Full replays open when voting starts.</p>
+              <button onClick={enter} className="rounded-full bg-ink px-7 py-3.5 text-lg text-paper">{tl.joinNow}</button>
+              <p className="text-sm text-muted">{tl.hearRest}</p>
             </div>
           )}
           {loadError && <p role="alert" className="text-loss">{loadError}</p>}
-          <p className="sr-only" role="status">{cur ? `Now playing @${cur.username}` : next ? `Up next @${next.username}` : ''}</p>
+          <p className="sr-only" role="status">{cur ? tl.srNow(cur.username) : next ? tl.srNext(next.username) : ''}</p>
         </section>
       )}
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold [font-stretch:112%]">Running order</h2>
+        <h2 className="text-xl font-bold [font-stretch:112%]">{dict.stage.runningOrder}</h2>
         <ol className="grid">
           {lineup.map((p, i) => {
             const slot = schedule.find((s) => s.sub.user_id === p.uid);
             let state = '';
-            if (phase === 'live' && slot) state = t >= slot.at + slot.dur ? 'Played' : t >= slot.at ? 'Playing now' : `Starts in ${formatClock(slot.at - t)}`;
-            else if (p.uid === currentUserId) state = mySubmitted ? 'Your round is in' : 'Waiting for your round';
+            if (phase === 'live' && slot) state = t >= slot.at + slot.dur ? tl.played : t >= slot.at ? tl.playingNow : tl.startsInClock(formatClock(slot.at - t));
+            else if (p.uid === currentUserId) state = mySubmitted ? tl.roundIn : tl.waitingRound;
             return (
               <li key={p.uid ?? i} className="grid grid-cols-[1.75rem_1fr_auto] items-baseline gap-3 border-b border-line py-3">
                 <span className="num text-muted">{i + 1}</span>
-                <span>@{p.name}, round 1</span>
+                <span>{tl.slot(p.name)}</span>
                 <span className="num text-sm text-muted">{state}</span>
               </li>
             );
           })}
         </ol>
-        {phase === 'lobby' && <p className="text-sm text-muted">{battle.turn_number} of 2 rounds are in. Voting opens for everyone when the last round ends.</p>}
+        {phase === 'lobby' && <p className="text-sm text-muted">{tl.roundsIn(battle.turn_number)}</p>}
       </section>
 
       {phase === 'lobby' && isParticipant && !mySubmitted && (
         <section className="grid gap-3">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Your round</h2>
-          <p>Get it in before the start, or the battle counts as a forfeit. Your opponent can’t hear it until the premiere.</p>
-          <AudioRecorder maxSeconds={battle.round_duration_seconds} onSubmit={handleSubmit} submitLabel="Lock in my round" />
+          <h2 className="text-xl font-bold [font-stretch:112%]">{tl.yourRound}</h2>
+          <p>{tl.getItIn}</p>
+          <AudioRecorder maxSeconds={battle.round_duration_seconds} onSubmit={handleSubmit} submitLabel={tl.lockIn} />
         </section>
       )}
     </div>

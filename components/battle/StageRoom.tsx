@@ -9,6 +9,7 @@ import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
 import { STAGE_LISTEN_GRACE_MS, STAGE_PUBLISH, slotKey } from '@/lib/live/stage';
 import { formatClock, formatTime } from '@/lib/format';
+import { useI18n } from '@/components/i18n/I18nProvider';
 import type { BattleJudge, BattleWithPlayers, Vote } from '@/lib/types';
 
 interface Props {
@@ -30,6 +31,7 @@ const ms = (iso: string | null) => (iso ? new Date(iso).getTime() : 0);
  * a reload lands exactly where the battle is.
  */
 export default function StageRoom({ battle, judges, votes, currentUserId, onHeard }: Props) {
+  const ts = useI18n().t.stage;
   const supabase = useMemo(() => createClient(), []);
   const clock = useServerClock();
   const now = clock.now;
@@ -105,7 +107,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ battleId: battle.id }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'The room couldn’t be opened.');
+      if (!res.ok) throw new Error(body.error ?? ts.roomFailed);
 
       const room = new Room({ adaptiveStream: false, dynacast: false });
       roomRef.current = room;
@@ -139,7 +141,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       if (isPerformer) {
         const source = rec.getStream()?.getAudioTracks()[0];
-        if (!source) throw new Error('The microphone didn’t start.');
+        if (!source) throw new Error(ts.micFailed);
         const mic = new LocalAudioTrack(source.clone(), undefined, true);
         await mic.mute();
         await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone, ...STAGE_PUBLISH });
@@ -147,7 +149,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
       }
       setJoined(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The room couldn’t be opened.');
+      setError(err instanceof Error ? err.message : ts.roomFailed);
       void roomRef.current?.disconnect();
       roomRef.current = null;
     } finally {
@@ -211,7 +213,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
       (async () => {
         const take = await rec.stop();
         if (!take || !currentUserId) {
-          setUploads((u) => u.map((x) => (x.round === round ? { ...x, state: 'failed', message: 'Nothing was recorded.' } : x)));
+          setUploads((u) => u.map((x) => (x.round === round ? { ...x, state: 'failed', message: ts.nothingRecorded } : x)));
           return;
         }
         rec.reset();
@@ -269,7 +271,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
     try {
       await stageRpc(supabase, fn, { p_battle: battle.id, ...args });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That didn’t work. Try again.');
+      setError(err instanceof Error ? err.message : ts.actionFailed);
     } finally {
       setBusy(false);
     }
@@ -281,7 +283,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
       await stageRpc(supabase, 'judge_vote', { p_battle: battle.id, p_voted_for: userId });
     } catch (err) {
       setMyJudgeVote(null);
-      setError(err instanceof Error ? err.message : 'Your vote didn’t go through.');
+      setError(err instanceof Error ? err.message : ts.voteFailed);
     }
   }
 
@@ -304,90 +306,90 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
       <p className="flex flex-wrap items-center gap-x-2 text-lg">
         <span className={`inline-flex items-center gap-2 font-semibold ${opened ? 'text-sub' : ''}`}>
           <span className={`size-2.5 rounded-full ${opened ? 'animate-pulse bg-sub' : 'bg-muted'}`} aria-hidden="true" />
-          {opened ? 'Stage open' : 'Stage battle'}
+          {opened ? ts.stageOpen : ts.stageBattle}
         </span>
-        {!battle.ranked && <span className="rounded-full border border-line px-2 py-0.5 text-sm text-muted">Casual: no rating or points</span>}
+        {!battle.ranked && <span className="rounded-full border border-line px-2 py-0.5 text-sm text-muted">{ts.casual}</span>}
         {joined && (
           <>
             <span className="num">{audience}</span>
-            <span className="text-muted">{audience === 1 ? 'person' : 'people'} in the room</span>
-            {connection !== ConnectionState.Connected && <span className="text-loss">reconnecting…</span>}
+            <span className="text-muted">{ts.inRoom(audience)}</span>
+            {connection !== ConnectionState.Connected && <span className="text-loss">{ts.reconnecting}</span>}
           </>
         )}
       </p>
 
       {/* ---------------- Stage display ---------------- */}
-      <section className="grid justify-items-start gap-3" aria-label="Stage">
+      <section className="grid justify-items-start gap-3" aria-label={ts.stage}>
         {!opened && (
           <>
-            <p className="text-lg text-muted">Stage opens in</p>
+            <p className="text-lg text-muted">{ts.opensIn}</p>
             <p className={big}>{formatClock(ms(battle.starts_at) - t)}</p>
             <p className="max-w-[56ch] text-lg">
-              The host @{battle.host?.username ?? 'host'} calls each round live. {judged
-                ? `${battle.judge_count} judges vote right after the last round.`
-                : 'The audience votes after the battle.'}
+              {ts.hostCalls(battle.host?.username ?? 'host')} {judged
+                ? ts.judgesVote(battle.judge_count ?? 0)
+                : ts.audienceVotes}
             </p>
           </>
         )}
 
         {opened && counting && (
           <>
-            <p className="text-lg text-muted">{myTurn ? 'You’re on in' : `@${names[performerNow!]} is on in`}</p>
+            <p className="text-lg text-muted">{myTurn ? ts.youreOnIn : ts.isOnIn(names[performerNow!])}</p>
             <p className={`${big} text-sub`}>{Math.ceil((roundStart - t) / 1000)}</p>
-            <p className="text-muted">Round {slotRound(slot!)}{myTurn ? '. Get close to the mic.' : ''}</p>
+            <p className="text-muted">{ts.round(slotRound(slot!))}{myTurn ? ts.getClose : ''}</p>
           </>
         )}
 
         {opened && performing && (
           myTurn ? (
             <>
-              <p className="text-lg font-semibold text-sub">You’re on. Go.</p>
+              <p className="text-lg font-semibold text-sub">{ts.youreOn}</p>
               <p className={big}>{formatClock(roundEnd - t)}</p>
-              <p className="text-muted">Round {slotRound(slot!)}. Your mic closes by itself when time runs out.</p>
+              <p className="text-muted">{ts.micCloses(slotRound(slot!))}</p>
             </>
           ) : (
             <>
-              <p className="text-lg text-muted">Now performing, round {slotRound(slot!)}</p>
+              <p className="text-lg text-muted">{ts.nowPerforming(slotRound(slot!))}</p>
               <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">@{names[performerNow!]}</h2>
               <p className="num text-muted">{formatTime((t - roundStart) / 1000)} / {formatTime((roundEnd - roundStart) / 1000)}</p>
               {joined && levelBar(performerNow!)}
-              {joined && !present.includes(performerNow!) && <p className="text-loss">@{names[performerNow!]} isn’t in the room.</p>}
+              {joined && !present.includes(performerNow!) && <p className="text-loss">{ts.notInRoom(names[performerNow!])}</p>}
             </>
           )
         )}
 
         {opened && !counting && !performing && phase !== 'voting' && phase !== 'tiebreak' && phase !== 'result' && (
           <>
-            <p className="text-lg text-muted">{roundsDone === 0 ? 'Waiting for the host to start' : roundsDone >= totalSlots ? 'All rounds done' : 'Next up'}</p>
+            <p className="text-lg text-muted">{roundsDone === 0 ? ts.waitingHost : roundsDone >= totalSlots ? ts.allDone : ts.nextUp}</p>
             <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">
-              {roundsDone >= totalSlots ? (judged ? 'Judges are up next' : 'Voting is next') : `@${names[slotUser(nextSlot)]}`}
+              {roundsDone >= totalSlots ? (judged ? ts.judgesNext : ts.votingNext) : `@${names[slotUser(nextSlot)]}`}
             </h2>
           </>
         )}
 
         {opened && phase === 'voting' && (
           <>
-            <p className="text-lg text-muted">The judges are voting</p>
+            <p className="text-lg text-muted">{ts.judgesVoting}</p>
             <p className={big}>{Math.max(0, Math.ceil(votingLeft / 1000))}</p>
-            <p className="num text-muted">{battle.stage_votes_in} of {battle.judge_count} votes in</p>
+            <p className="num text-muted">{ts.votesIn(battle.stage_votes_in, battle.judge_count ?? 0)}</p>
           </>
         )}
 
         {opened && phase === 'tiebreak' && (
           <>
-            <p className="text-[clamp(2rem,6vw,3.6rem)] leading-none font-bold">Tied.</p>
-            <p className="text-muted">The host decides the winner.</p>
+            <p className="text-[clamp(2rem,6vw,3.6rem)] leading-none font-bold">{ts.tied}</p>
+            <p className="text-muted">{ts.hostDecides}</p>
           </>
         )}
 
         {!joined && (
           <div className="grid justify-items-start gap-2">
             <button onClick={enter} disabled={connecting} className="rounded-full bg-ink px-7 py-3.5 text-lg text-paper disabled:opacity-60">
-              {connecting ? 'Opening the room…' : isPerformer ? 'Enter the stage' : isHost ? 'Enter as host' : isJudge ? 'Enter as judge' : 'Enter to listen'}
+              {connecting ? ts.opening : isPerformer ? ts.enterStage : isHost ? ts.enterHost : isJudge ? ts.enterJudge : ts.enterListen}
             </button>
             <p className="text-sm text-muted">
-              {isPerformer ? <>Use headphones and enter a few minutes early. Your mic only opens on your round. <a href="/mic-check" target="_blank" className="underline underline-offset-4">Run a mic check</a> first.</>
-                : 'Sound starts after you enter. Use headphones or good speakers to hear every detail.'}
+              {isPerformer ? <>{ts.performerHint} <a href="/mic-check" target="_blank" className="underline underline-offset-4">{ts.runMicCheck}</a> {ts.first}</>
+                : ts.listenerHint}
             </p>
           </div>
         )}
@@ -396,12 +398,12 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       {/* ---------------- Judge panel ---------------- */}
       {isJudge && opened && phase === 'voting' && (
-        <section className="grid gap-4 rounded-2xl border-2 border-sub p-5" aria-label="Your vote">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Your vote</h2>
+        <section className="grid gap-4 rounded-2xl border-2 border-sub p-5" aria-label={ts.yourVote}>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{ts.yourVote}</h2>
           {myJudgeVote ? (
-            <p className="text-lg">You voted for <strong>@{names[myJudgeVote]}</strong>. Waiting for the other judges.</p>
+            <p className="text-lg">{ts.youVotedJudge(names[myJudgeVote])}</p>
           ) : votingLeft <= -2000 ? (
-            <p className="text-loss">Time’s up.</p>
+            <p className="text-loss">{ts.timesUp}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {[A, B].map((u) => (
@@ -416,59 +418,59 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       {/* ---------------- Host panel ---------------- */}
       {isHost && (
-        <section className="grid gap-4 rounded-2xl border-2 border-ink p-5" aria-label="Host controls">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Host controls</h2>
+        <section className="grid gap-4 rounded-2xl border-2 border-ink p-5" aria-label={ts.hostControls}>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{ts.hostControls}</h2>
           {!opened ? (
-            <p className="text-muted">Your buttons appear when the stage opens at the start time.</p>
+            <p className="text-muted">{ts.buttonsAppear}</p>
           ) : (
             <>
               <div className="flex flex-wrap gap-2">
                 {(phase === 'idle' || (phase === 'round' && t >= roundEnd)) && nextSlot < totalSlots && (
                   <button disabled={busy} onClick={() => act('stage_start_round', {})} className={`${btn} bg-ink text-paper`}>
-                    Start round {slotRound(nextSlot)}: @{names[slotUser(nextSlot)]}
+                    {ts.startRound(slotRound(nextSlot), names[slotUser(nextSlot)])}
                   </button>
                 )}
                 {performing && (
-                  <button disabled={busy} onClick={() => act('stage_stop_round', {})} className={`${btn} border border-line`}>Stop round now</button>
+                  <button disabled={busy} onClick={() => act('stage_stop_round', {})} className={`${btn} border border-line`}>{ts.stopRound}</button>
                 )}
                 {slot !== null && !counting && !performing && phase === 'round' && (
                   <button disabled={busy} onClick={() => act('stage_start_round', { p_slot: slot })} className={`${btn} border border-line`}>
-                    Redo round {slotRound(slot)} (@{names[slotUser(slot)]})
+                    {ts.redoRound(slotRound(slot), names[slotUser(slot)])}
                   </button>
                 )}
                 {slot !== null && !counting && !performing && phase === 'round' && roundsDone >= totalSlots && (
                   <button disabled={busy} onClick={() => act('stage_start_voting', {})} className={`${btn} bg-sub text-paper`}>
-                    {judged ? 'Start voting' : 'Open the public vote'}
+                    {judged ? ts.startVoting : ts.openPublicVote}
                   </button>
                 )}
                 {phase === 'tiebreak' && [A, B].map((u) => (
                   <button key={u} disabled={busy} onClick={() => act('stage_host_decide', { p_winner: u })} className={`${btn} bg-ink text-paper`}>
-                    Winner: @{names[u]}
+                    {ts.winnerIs(names[u])}
                   </button>
                 ))}
               </div>
               <p className="text-sm text-muted">
-                Rounds start 3 seconds after you click, so every screen counts down together. Redo a round if someone’s connection dropped.
+                {ts.hostHint}
               </p>
             </>
           )}
 
           {judged && phase !== 'voting' && phase !== 'tiebreak' && phase !== 'result' && (
             <div className="grid gap-2 border-t border-line pt-4">
-              <h3 className="font-semibold">Judges</h3>
+              <h3 className="font-semibold">{ts.judges}</h3>
               <ul className="grid gap-1 text-sm">
                 {activeJudges.map((j) => (
                   <li key={j.judge_id} className="flex flex-wrap items-center gap-2">
-                    <span>@{j.judge?.username}{j.is_reserve ? ' (reserve)' : ''}</span>
-                    <span className={present.includes(j.judge_id) ? 'text-win' : 'text-muted'}>{joined ? (present.includes(j.judge_id) ? 'in the room' : 'not in the room') : ''}</span>
-                    <button onClick={() => { setReplaceFor(j.judge_id); setReplacement(''); }} className="text-muted underline underline-offset-4">Replace</button>
+                    <span>@{j.judge?.username}{j.is_reserve ? ` (${ts.reserve})` : ''}</span>
+                    <span className={present.includes(j.judge_id) ? 'text-win' : 'text-muted'}>{joined ? (present.includes(j.judge_id) ? ts.inTheRoom : ts.notInTheRoom) : ''}</span>
+                    <button onClick={() => { setReplaceFor(j.judge_id); setReplacement(''); }} className="text-muted underline underline-offset-4">{ts.replace}</button>
                     {replaceFor === j.judge_id && (
                       <span className="flex items-center gap-2">
-                        <input value={replacement} onChange={(e) => setReplacement(e.target.value.replace(/^@/, ''))} placeholder="new judge handle"
+                        <input value={replacement} onChange={(e) => setReplacement(e.target.value.replace(/^@/, ''))} placeholder={ts.newJudge}
                           className="rounded-lg border border-line bg-surface px-2 py-1" />
                         <button disabled={busy || !replacement} className="rounded-full bg-ink px-3 py-1 text-paper"
                           onClick={async () => { await act('stage_replace_judge', { p_old: j.judge_id, p_new_username: replacement }); setReplaceFor(null); }}>
-                          Confirm
+                          {ts.confirm}
                         </button>
                       </span>
                     )}
@@ -482,9 +484,9 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       {/* ---------------- Crowd vote ---------------- */}
       {judged && opened && ['voting', 'tiebreak', 'result'].includes(phase) && (
-        <section className="grid gap-3" aria-label="Crowd vote">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Crowd vote</h2>
-          <p className="text-sm text-muted">Just for fun: the judges decide the battle.</p>
+        <section className="grid gap-3" aria-label={ts.crowdVote}>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{ts.crowdVote}</h2>
+          <p className="text-sm text-muted">{ts.justForFun}</p>
           {canCrowdVote && !myCrowdVote && (
             <div className="flex flex-wrap gap-2">
               {[A, B].map((u) => (
@@ -493,22 +495,22 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
               ))}
             </div>
           )}
-          <p className="num">@{names[A]} {crowd[0]} to {crowd[1]} @{names[B]}</p>
+          <p className="num">{ts.crowdScore(names[A], crowd[0], crowd[1], names[B])}</p>
         </section>
       )}
 
       {/* ---------------- Performer status ---------------- */}
       {isPerformer && joined && (
         <section className="grid max-w-xl gap-3 rounded-2xl border border-line bg-surface p-5">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Your mic</h2>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{ts.yourMic}</h2>
           {levelBar(currentUserId!)}
-          <p className="text-sm text-muted">The bar shows your level so you can check it any time. It only goes out to the room during your rounds, with voice processing off.</p>
+          <p className="text-sm text-muted">{ts.micHint}</p>
           {rec.warnings.length > 0 && (
             <ul className="grid gap-1 rounded-lg border border-sub/40 bg-sub/5 p-3 text-sm">{rec.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
           )}
           {uploads.map((u) => (
             <p key={u.round} className={`text-sm ${u.state === 'failed' ? 'text-loss' : u.state === 'done' ? 'text-win' : ''}`}>
-              Round {u.round} replay: {u.state === 'recording' ? 'recording…' : u.state === 'uploading' ? 'uploading…' : u.state === 'done' ? 'saved' : `failed. ${u.message ?? ''}`}
+              {ts.replayStatus(u.round, u.state === 'recording' ? ts.recording : u.state === 'uploading' ? ts.uploading : u.state === 'done' ? ts.saved : ts.failed(u.message ?? ''))}
             </p>
           ))}
         </section>
@@ -516,7 +518,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       {/* ---------------- Running order ---------------- */}
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold [font-stretch:112%]">Running order</h2>
+        <h2 className="text-xl font-bold [font-stretch:112%]">{ts.runningOrder}</h2>
         <ol className="grid">
           {Array.from({ length: totalSlots }, (_, i) => {
             const done = i < roundsDone;
@@ -524,16 +526,16 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
             return (
               <li key={i} className={`grid grid-cols-[1.75rem_1fr_auto] items-center gap-3 border-b border-line py-3 ${live ? 'text-sub' : ''}`}>
                 <span className="num text-muted">{i + 1}</span>
-                <span>@{names[slotUser(i)]}, round {slotRound(i)}</span>
-                <span className="text-sm text-muted">{live ? 'On now' : done ? 'Done' : ''}</span>
+                <span>{ts.slotLabel(names[slotUser(i)], slotRound(i))}</span>
+                <span className="text-sm text-muted">{live ? ts.onNow : done ? ts.done : ''}</span>
               </li>
             );
           })}
         </ol>
         {judged && (
           <p className="text-sm text-muted">
-            Judges: {activeJudges.filter((j) => !j.is_reserve).map((j) => `@${j.judge?.username}`).join(', ')}
-            {activeJudges.some((j) => j.is_reserve) && `, reserve @${activeJudges.find((j) => j.is_reserve)?.judge?.username}`}
+            {ts.judgesList(activeJudges.filter((j) => !j.is_reserve).map((j) => `@${j.judge?.username}`).join(', '))}
+            {activeJudges.some((j) => j.is_reserve) && ts.reserveList(activeJudges.find((j) => j.is_reserve)?.judge?.username ?? '')}
           </p>
         )}
       </section>

@@ -13,7 +13,8 @@ import LiveRoom from './LiveRoom';
 import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
 import BadgeChip from '@/components/badges/BadgeChip';
-import { flagEmoji, hoursText, intervalHours, signed } from '@/lib/format';
+import { useI18n } from '@/components/i18n/I18nProvider';
+import { flagEmoji, intervalHours, signed } from '@/lib/format';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
 
 interface Props {
@@ -35,24 +36,25 @@ const LISTEN_TO_VOTE = 0.5;
 function PlayerHeader({ p, align, isWinner, eloDelta }: {
   p: ProfileSummary | null; align: 'start' | 'end'; isWinner: boolean; eloDelta: number | null;
 }) {
+  const tb = useI18n().t.battle;
   return (
     <div className={`grid min-w-0 gap-1 ${align === 'end' ? 'md:justify-items-end md:text-right' : ''}`}>
       <h2 className="handle text-[clamp(1.75rem,5vw,3.25rem)] leading-none break-all">
         {p ? (
           <Link href={`/beatboxers/${p.username}`} className="underline-offset-4 hover:underline">@{p.username}</Link>
         ) : (
-          <span className="text-muted">Open slot</span>
+          <span className="text-muted">{tb.openSlot}</span>
         )}
       </h2>
       {p && (
         <p className="text-muted">
           <span aria-hidden="true">{flagEmoji(p.country)} </span>
-          <span className="num text-ink">{p.elo_rating}</span> rating
+          <span className="num text-ink">{p.elo_rating}</span> {tb.rating}
           {p.featured_badge && <span className="ml-2"><BadgeChip code={p.featured_badge} compact /></span>}
           {eloDelta != null && (
             <span className={`num ml-2 ${eloDelta >= 0 ? 'text-win' : 'text-loss'}`}>{signed(eloDelta)}</span>
           )}
-          {isWinner && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-sm text-paper">Winner</span>}
+          {isWinner && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-sm text-paper">{tb.winner}</span>}
         </p>
       )}
     </div>
@@ -60,6 +62,7 @@ function PlayerHeader({ p, align, isWinner, eloDelta }: {
 }
 
 export default function BattleView({ battle, submissions, initialVotes, currentUserId, inviteToken, shareToken, judges = [], judgeVotes = [] }: Props) {
+  const tb = useI18n().t.battle;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [votes, setVotes] = useState<Vote[]>(initialVotes);
@@ -148,39 +151,39 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   const statusLine = (() => {
     switch (battle.status) {
       case 'open':
-        return <>Open challenge, waiting for an opponent. Expires in <Countdown to={battle.turn_deadline!} />.</>;
+        return <>{tb.stOpen} <Countdown to={battle.turn_deadline!} />.</>;
       case 'pending':
         return scheduled
-          ? <>Waiting for @{nameOf(battle.opponent_id)} to accept. The battle starts in <Countdown to={battle.starts_at!} />.</>
-          : <>Waiting for @{nameOf(battle.opponent_id)} to accept. Expires in <Countdown to={battle.turn_deadline!} />.</>;
+          ? <>{tb.stPendingStarts(nameOf(battle.opponent_id))} <Countdown to={battle.starts_at!} />.</>
+          : <>{tb.stPending(nameOf(battle.opponent_id))} <Countdown to={battle.turn_deadline!} />.</>;
       case 'active':
-        if (isStage) return <>The stage opens in <Countdown to={battle.starts_at!} />.</>;
-        if (isLive) return <>Rounds are being locked in. The battle starts in <Countdown to={battle.starts_at!} />.</>;
+        if (isStage) return <>{tb.stStageOpens} <Countdown to={battle.starts_at!} />.</>;
+        if (isLive) return <>{tb.stLiveLocking} <Countdown to={battle.starts_at!} />.</>;
         return battle.current_turn_user_id === currentUserId
-          ? <>Your turn. <Countdown to={battle.turn_deadline!} /> left to respond.</>
-          : <>@{nameOf(battle.current_turn_user_id)} is up. <Countdown to={battle.turn_deadline!} /> left to respond.</>;
+          ? <>{tb.stYourTurn} <Countdown to={battle.turn_deadline!} /> {tb.stLeft}</>
+          : <>{tb.stUp(nameOf(battle.current_turn_user_id))} <Countdown to={battle.turn_deadline!} /> {tb.stLeft}</>;
       case 'live':
-        return <>Live now.</>;
+        return <>{tb.stLiveNow}</>;
       case 'voting':
-        return <>Voting closes in <Countdown to={battle.voting_ends_at!} />.</>;
+        return <>{tb.stVotingCloses} <Countdown to={battle.voting_ends_at!} />.</>;
       case 'finished':
         if (battle.result === 'forfeit')
           return scheduled
-            ? <>@{nameOf(battle.winner_id)} wins by forfeit. @{nameOf(battle.forfeited_by)} didn’t get a round in before the start.</>
-            : <>@{nameOf(battle.winner_id)} wins by forfeit. @{nameOf(battle.forfeited_by)} missed the response window.</>;
-        if (battle.result === 'draw') return <>Draw, {tally[0]} votes each.</>;
-        if (battle.result === 'no_contest') return <>No votes were cast, so ratings didn’t change.</>;
+            ? <>{tb.stForfeitScheduled(nameOf(battle.winner_id), nameOf(battle.forfeited_by))}</>
+            : <>{tb.stForfeit(nameOf(battle.winner_id), nameOf(battle.forfeited_by))}</>;
+        if (battle.result === 'draw') return <>{tb.stDraw(tally[0])}</>;
+        if (battle.result === 'no_contest') return <>{tb.stNoContest}</>;
         if (judged) {
           const jw = judgeVotes.filter((v) => v.voted_for === battle.winner_id).length;
-          return <>@{nameOf(battle.winner_id)} wins on the judges’ decision{judgeVotes.length ? `, ${jw} to ${judgeVotes.length - jw}` : ''}.</>;
+          return <>{tb.stJudges(nameOf(battle.winner_id), judgeVotes.length ? `, ${jw}–${judgeVotes.length - jw}` : '')}</>;
         }
-        return <>@{nameOf(battle.winner_id)} wins by decision, {Math.max(...tally)} to {Math.min(...tally)}.</>;
+        return <>{tb.stWins(nameOf(battle.winner_id), Math.max(...tally), Math.min(...tally))}</>;
       case 'cancelled':
-        return <>This challenge expired or was declined before it started.</>;
+        return <>{tb.stExpired}</>;
     }
   })();
 
-  const details = `${isStage ? `Stage battle, real time${battle.host ? `, hosted by @${battle.host.username}` : ''}. ` : isLive ? 'Live battle. ' : ''}${battle.rounds_per_player === 1 ? 'One round' : `${battle.rounds_per_player} rounds`} each, ${battle.round_duration_seconds} seconds per round${judged ? `, ${battle.judge_count} judges` : `, voting open ${hoursText(votingHours)}${scheduled ? ' after the last round' : ''}`}${battle.ranked ? '' : '. Casual: no rating or points'}`;
+  const details = `${isStage ? `${tb.dStage}${battle.host ? tb.dHostedBy(battle.host.username) : ''}. ` : isLive ? tb.dLive : ''}${tb.dRounds(battle.rounds_per_player)}, ${tb.dSeconds(battle.round_duration_seconds)}${judged ? `, ${tb.dJudges(battle.judge_count ?? 0)}` : `, ${tb.dVoting(tb.hours(votingHours))}${scheduled ? tb.dAfterLast : ''}`}${battle.ranked ? '' : `. ${tb.dCasual}`}`;
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -188,14 +191,14 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
     try {
       await action();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
+      setError(err instanceof Error ? err.message : tb.errGeneric);
     } finally {
       setBusy(false);
     }
   }
 
   const handleSubmit = useCallback(async (take: PreparedTake) => {
-    if (!currentUserId) throw new Error('Log in to submit a round.');
+    if (!currentUserId) throw new Error(tb.errLogin);
     await submitTake(supabase, battle.id, currentUserId, take);
     router.refresh();
   }, [supabase, battle.id, currentUserId, router]);
@@ -232,24 +235,24 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             {canAccept && (
               <button onClick={() => run(async () => { await acceptChallenge(supabase, battle.id, inviteToken); router.refresh(); })}
                 disabled={busy} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-                {battle.status === 'open' ? 'Take this battle' : 'Accept challenge'}
+                {battle.status === 'open' ? tb.take : tb.accept}
               </button>
             )}
             {canDecline && (
               <button onClick={() => run(async () => { await declineChallenge(supabase, battle.id); router.refresh(); })}
                 disabled={busy} className="rounded-full border border-line px-6 py-3">
-                {currentUserId === battle.challenger_id ? 'Cancel challenge' : 'Decline'}
+                {currentUserId === battle.challenger_id ? tb.cancel : tb.decline}
               </button>
             )}
             {inviteUrl && currentUserId === battle.challenger_id && (
               <button onClick={() => navigator.clipboard.writeText(inviteUrl)} className="rounded-full border border-line px-6 py-3">
-                Copy invite link
+                {tb.copyInvite}
               </button>
             )}
           </div>
         )}
         {!currentUserId && (battle.status === 'open' || battle.status === 'pending') && (
-          <p><Link href={`/login?next=/battles/${battle.id}`} className="underline underline-offset-4">Log in</Link> to take this battle.</p>
+          <p><Link href={`/login?next=/battles/${battle.id}`} className="underline underline-offset-4">{tb.logIn}</Link> {tb.toTake}</p>
         )}
       </header>
 
@@ -263,15 +266,15 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={matchLoudness} onChange={(e) => setMatchLoudness(e.target.checked)} className="size-4 accent-[var(--signal)]" />
-                Match loudness
+                {tb.matchLoudness}
               </label>
-              <span className="max-w-prose text-muted">Turns the louder side down so nobody wins on volume. Nothing is compressed or boosted.</span>
+              <span className="max-w-prose text-muted">{tb.matchLoudnessHint}</span>
               <span className="flex items-center gap-2 text-muted">
                 <span className="inline-block h-3 w-1 rounded-sm bg-sub" aria-hidden="true" />
-                Sub-bass below 100 Hz
+                {tb.subLegend}
               </span>
-              {isLive && <span className="text-muted">Replays of the live premiere.</span>}
-              {isStage && <span className="text-muted">Lossless replays recorded on each battler’s device during the stage.</span>}
+              {isLive && <span className="text-muted">{tb.liveReplays}</span>}
+              {isStage && <span className="text-muted">{tb.stageReplays}</span>}
             </div>
           )}
 
@@ -279,22 +282,22 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             <div className="grid gap-10">
               {Array.from({ length: battle.rounds_per_player }, (_, i) => i + 1).map((round) => (
                 <section key={round} aria-labelledby={`round-${round}`} className="grid gap-4">
-                  <h3 id={`round-${round}`} className="text-sm text-muted">Round {round}</h3>
+                  <h3 id={`round-${round}`} className="text-sm text-muted">{tb.round(round)}</h3>
                   <div className="grid gap-6 md:grid-cols-2 md:gap-10">
                     {sides.map((side, idx) => {
                       const sub = submissions.find((s) => s.user_id === side.id && s.round_number === round);
                       const isTurn = !scheduled && battle.status === 'active' && battle.current_turn_user_id === side.id && round === expectedRound;
-                      const who = side.profile ? `@${side.profile.username}` : 'Open slot';
+                      const who = side.profile ? `@${side.profile.username}` : tb.openSlot;
                       if (sub) {
                         const heard = heardOf(sub);
                         return (
                           <div key={idx} className="grid gap-2">
-                            <p className="text-sm">{who}{!sub.is_lossless && <span className="ml-2 text-muted">compressed upload</span>}</p>
+                            <p className="text-sm">{who}{!sub.is_lossless && <span className="ml-2 text-muted">{tb.compressedUpload}</span>}</p>
                             <WaveformPlayer src={audioUrl(sub.stream_path ?? sub.audio_path)} waveform={sub.waveform_data}
                               durationMs={sub.duration_ms} gainDb={gainFor(sub)} label={`${who} round ${round}`}
                               onListenProgress={(f) => setHeard(sub.id, f)} />
                             {battle.status === 'voting' && !isParticipant && !myVote && (
-                              <p className="text-sm text-muted">{heard >= LISTEN_TO_VOTE ? 'Heard' : `${Math.round(heard * 100)}% heard`}</p>
+                              <p className="text-sm text-muted">{heard >= LISTEN_TO_VOTE ? tb.heard : tb.heardPct(Math.round(heard * 100))}</p>
                             )}
                           </div>
                         );
@@ -302,15 +305,15 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                       if (isTurn && side.id === currentUserId) {
                         return (
                           <div key={idx} className="grid gap-3 md:col-span-2">
-                            <p>Your round {round}. You have <Countdown to={battle.turn_deadline!} /> to submit.</p>
-                            <AudioRecorder maxSeconds={battle.round_duration_seconds} onSubmit={handleSubmit} submitLabel={`Submit round ${round}`} />
+                            <p>{tb.yourRound(round)} <Countdown to={battle.turn_deadline!} /> {tb.toSubmit}</p>
+                            <AudioRecorder maxSeconds={battle.round_duration_seconds} onSubmit={handleSubmit} submitLabel={tb.submitRound(round)} />
                           </div>
                         );
                       }
                       return (
                         <div key={idx} className="grid min-h-28 place-items-center rounded-xl border border-dashed border-line p-4 text-center text-muted">
-                          {isTurn ? <span>Waiting for {who}. <Countdown to={battle.turn_deadline!} /> left.</span>
-                            : isStage ? 'No replay for this round yet' : battle.status === 'finished' ? 'Not recorded' : `${who} hasn’t recorded this round yet`}
+                          {isTurn ? <span>{tb.waitingFor(who)} <Countdown to={battle.turn_deadline!} /> {tb.left}</span>
+                            : isStage ? tb.noReplayYet : battle.status === 'finished' ? tb.notRecorded : tb.notYet(who)}
                         </div>
                       );
                     })}
@@ -324,51 +327,51 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
 
       {judged && battle.status === 'finished' && (
         <section aria-labelledby="judges-heading" className="grid gap-4 rounded-2xl bg-surface p-5 sm:p-6">
-          <h3 id="judges-heading" className="text-xl">Judges’ decision</h3>
+          <h3 id="judges-heading" className="text-xl">{tb.judgesDecision}</h3>
           <ul className="grid gap-2 sm:grid-cols-2">
             {judges.filter((j) => j.active).map((j) => {
               const v = judgeVotes.find((x) => x.judge_id === j.judge_id);
               return (
                 <li key={j.judge_id} className="flex justify-between gap-3 border-b border-line py-2">
-                  <span>@{j.judge?.username}{j.is_reserve ? <span className="text-muted"> (reserve)</span> : null}</span>
+                  <span>@{j.judge?.username}{j.is_reserve ? <span className="text-muted"> ({tb.reserve})</span> : null}</span>
                   <span className={v ? (v.voted_for === battle.winner_id ? 'text-win' : '') : 'text-muted'}>
-                    {v ? `@${nameOf(v.voted_for)}` : j.is_reserve ? 'not needed' : 'didn’t vote'}
+                    {v ? `@${nameOf(v.voted_for)}` : j.is_reserve ? tb.notNeeded : tb.didntVote}
                   </span>
                 </li>
               );
             })}
           </ul>
           {judgeVotes.length > 0 && judgeVotes.filter((v) => v.voted_for === battle.winner_id).length * 2 === judgeVotes.length && (
-            <p className="text-sm text-muted">The judges were tied, so the host decided.</p>
+            <p className="text-sm text-muted">{tb.judgesTied}</p>
           )}
           <p className="text-sm text-muted">
-            Crowd vote, just for fun: @{challenger.username} {tally[0]} to {tally[1]} @{opponent?.username}
+            {tb.crowd(challenger.username, tally[0], tally[1], opponent?.username ?? '')}
           </p>
         </section>
       )}
 
       {!judged && (battle.status === 'voting' || battle.status === 'finished') && battle.opponent_id && battle.result !== 'forfeit' && (
         <section aria-labelledby="vote-heading" className="grid gap-5 rounded-2xl bg-surface p-5 sm:p-6">
-          <h3 id="vote-heading" className="text-xl">{battle.status === 'voting' ? 'Who took it?' : 'Votes'}</h3>
+          <h3 id="vote-heading" className="text-xl">{battle.status === 'voting' ? tb.whoTookIt : tb.votes}</h3>
 
           {battle.status === 'voting' && (
             !currentUserId ? (
-              <p><Link href={`/login?next=/battles/${battle.id}`} className="underline underline-offset-4">Log in to vote</Link>. Votes are public and tied to your profile.</p>
+              <p><Link href={`/login?next=/battles/${battle.id}`} className="underline underline-offset-4">{tb.logInToVote}</Link>. {tb.votesPublic}</p>
             ) : isParticipant ? (
-              <p className="text-muted">You can’t vote in your own battle.</p>
+              <p className="text-muted">{tb.ownBattle}</p>
             ) : myVote ? (
-              <p>You voted for @{nameOf(myVote.voted_for_user_id)}.</p>
+              <p>{tb.youVoted(nameOf(myVote.voted_for_user_id))}</p>
             ) : (
               <div className="grid gap-3">
                 <div className="grid gap-3 sm:grid-cols-2">
                   {sides.map((side) => (
                     <button key={side.id} onClick={() => side.id && vote(side.id)} disabled={!heardAll || busy}
                       className="rounded-xl border-2 border-ink px-5 py-4 text-lg hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:border-line disabled:text-muted disabled:hover:bg-transparent">
-                      Vote for <span className="handle">@{side.profile?.username}</span>
+                      {tb.voteFor} <span className="handle">@{side.profile?.username}</span>
                     </button>
                   ))}
                 </div>
-                {!heardAll && <p className="text-sm text-muted">Listen to at least half of every round to unlock voting.</p>}
+                {!heardAll && <p className="text-sm text-muted">{tb.listenFirst}</p>}
               </div>
             )
           )}
@@ -377,7 +380,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             <div className="grid gap-2">
               <div className="num flex justify-between text-lg">
                 <span>{tally[0]}</span>
-                <span className="text-sm text-muted">{totalVotes === 1 ? '1 vote' : `${totalVotes} votes`}</span>
+                <span className="text-sm text-muted">{tb.nVotes(totalVotes)}</span>
                 <span>{tally[1]}</span>
               </div>
               <div className="flex h-3 overflow-hidden rounded-full bg-line" role="img"
@@ -387,7 +390,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
               </div>
             </div>
           ) : battle.status === 'voting' && (
-            <p className="text-sm text-muted">Vote counts appear after you vote, so the crowd doesn’t steer you.</p>
+            <p className="text-sm text-muted">{tb.countsAfter}</p>
           )}
 
           {battle.status === 'finished' && votes.length > 0 && (
@@ -396,15 +399,15 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                 const voters = votes.filter((v) => v.voted_for_user_id === side.id);
                 return (
                   <div key={side.id}>
-                    <p className="mb-1 text-muted">Voted for @{side.profile?.username}</p>
+                    <p className="mb-1 text-muted">{tb.votedFor(side.profile?.username ?? '')}</p>
                     <p>
-                      {voters.length === 0 ? 'Nobody' : voters.slice(0, 40).map((v, i) => (
+                      {voters.length === 0 ? tb.nobody : voters.slice(0, 40).map((v, i) => (
                         <span key={v.id}>
                           {i > 0 && ', '}
                           {v.voter ? <Link href={`/beatboxers/${v.voter.username}`} className="underline-offset-4 hover:underline">@{v.voter.username}</Link> : 'a voter'}
                         </span>
                       ))}
-                      {voters.length > 40 && ` and ${voters.length - 40} more`}
+                      {voters.length > 40 && tb.andMore(voters.length - 40)}
                     </p>
                   </div>
                 );
@@ -417,7 +420,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
       {error && <p className="text-loss" role="alert">{error}</p>}
       {!isParticipant && (
         <div className="border-t border-line pt-4">
-          <ReportButton battleId={battle.id} signedIn={!!currentUserId} label="Report this battle" />
+          <ReportButton battleId={battle.id} signedIn={!!currentUserId} label={tb.report} />
         </div>
       )}
     </article>

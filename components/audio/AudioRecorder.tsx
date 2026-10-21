@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHiFiRecorder, type Levels } from '@/hooks/useHiFiRecorder';
+import { useI18n } from '@/components/i18n/I18nProvider';
 import WaveformPlayer from './WaveformPlayer';
 import { analyzeAudio } from '@/lib/audio/analyze';
 import { ACCEPTED_UPLOADS, describeUpload, readWavFormat } from '@/lib/audio/wav';
@@ -20,6 +21,7 @@ const dbToFraction = (db: number) => Math.max(0, Math.min(1, (db + 60) / 60));
 
 /** Two horizontal meters driven by requestAnimationFrame, no React re-renders per frame. */
 function LevelMeters({ getLevels, active }: { getLevels: () => Levels | null; active: boolean }) {
+  const r = useI18n().t.recorder;
   const fullRef = useRef<HTMLDivElement>(null);
   const subRef = useRef<HTMLDivElement>(null);
   const [clipping, setClipping] = useState(false);
@@ -46,8 +48,8 @@ function LevelMeters({ getLevels, active }: { getLevels: () => Levels | null; ac
   return (
     <div className="grid gap-2">
       {[
-        { ref: fullRef, name: 'Input level', color: 'bg-signal' },
-        { ref: subRef, name: 'Sub-bass, below 100 Hz', color: 'bg-sub' },
+        { ref: fullRef, name: r.inputLevel, color: 'bg-signal' },
+        { ref: subRef, name: r.subBass, color: 'bg-sub' },
       ].map((m) => (
         <div key={m.name} className="grid grid-cols-[9.5rem_1fr] items-center gap-3 text-sm">
           <span className="text-muted">{m.name}</span>
@@ -57,33 +59,34 @@ function LevelMeters({ getLevels, active }: { getLevels: () => Levels | null; ac
         </div>
       ))}
       <p className={`text-sm ${clipping ? 'text-loss' : 'invisible'}`} role="status">
-        Clipping. Move back from the mic or turn your interface gain down.
+        {r.clipping}
       </p>
     </div>
   );
 }
 
 function TakeDetails({ take }: { take: PreparedTake }) {
+  const r = useI18n().t.recorder;
   const a = take.analysis;
   const format = take.isLossless
     ? `${take.sourceCodec.startsWith('pcm') ? 'WAV' : 'FLAC'}${take.sampleRate ? `, ${take.sampleRate / 1000} kHz` : ''}${take.bitDepth ? ` ${take.bitDepth}-bit` : ''}`
-    : `${take.sourceCodec.toUpperCase()} (compressed file)`;
+    : r.compressed(take.sourceCodec.toUpperCase());
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
       <div>
-        <dt className="text-muted">Length</dt>
+        <dt className="text-muted">{r.length}</dt>
         <dd className="num text-base">{formatTime(a.durationMs / 1000)}</dd>
       </div>
       <div>
-        <dt className="text-muted">Format</dt>
-        <dd>{format}{take.channels === 2 ? ', stereo' : ', mono'}</dd>
+        <dt className="text-muted">{r.format}</dt>
+        <dd>{format}, {take.channels === 2 ? r.stereo : r.mono}</dd>
       </div>
       <div>
-        <dt className="text-muted">Sub-bass share</dt>
+        <dt className="text-muted">{r.subShare}</dt>
         <dd className="num text-base text-sub">{Math.round(a.subRatio * 100)}%</dd>
       </div>
       <div>
-        <dt className="text-muted">Loudness / peak</dt>
+        <dt className="text-muted">{r.loudness}</dt>
         <dd className="num">
           {formatDb(a.integratedLufs, 'LUFS')} / {formatDb(a.peakDbfs, 'dBFS')}
         </dd>
@@ -92,7 +95,8 @@ function TakeDetails({ take }: { take: PreparedTake }) {
   );
 }
 
-export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Submit round' }: Props) {
+export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel }: Props) {
+  const r = useI18n().t.recorder;
   const rec = useHiFiRecorder({ maxSeconds });
   const startRecording = rec.start;
   const [mode, setMode] = useState<Mode>('record');
@@ -127,7 +131,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
     setUploaded(null);
     const type = describeUpload(file);
     if (!type) {
-      setUploadError('Upload a WAV, FLAC, MP3 or M4A file.');
+      setUploadError(r.badType);
       return;
     }
     setUploadState('analyzing');
@@ -135,7 +139,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
       const analysis = await analyzeAudio(file);
       if (analysis.durationMs > maxSeconds * 1000 + 500) {
         throw new Error(
-          `This file is ${formatTime(analysis.durationMs / 1000)} long. Rounds here are ${maxSeconds} seconds max; trim it and upload again.`,
+          r.tooLong(formatTime(analysis.durationMs / 1000), maxSeconds),
         );
       }
       const wavFormat = type.ext === 'wav' ? await readWavFormat(file) : null;
@@ -151,7 +155,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
         channels: wavFormat?.channels ?? 1,
       });
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'This file couldn’t be read. Export it again as WAV and retry.');
+      setUploadError(err instanceof Error ? err.message : r.unreadable);
     } finally {
       setUploadState('idle');
     }
@@ -164,7 +168,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
     try {
       await onSubmit(take);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'The round wasn’t submitted. Try again.');
+      setSubmitError(err instanceof Error ? err.message : r.submitFailed);
     } finally {
       setSubmitting(false);
     }
@@ -187,7 +191,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
               mode === m ? 'bg-ink text-paper' : 'text-muted hover:text-ink'
             }`}
           >
-            {m === 'record' ? 'Record' : 'Upload a file'}
+            {m === 'record' ? r.record : r.upload}
           </button>
         ))}
       </div>
@@ -197,8 +201,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
           {(rec.status === 'idle' || rec.status === 'error' || rec.status === 'requesting') && (
             <div className="grid gap-3">
               <p className="max-w-prose text-muted">
-                Your browser’s voice filters get switched off, so every sound is recorded as you make it: bass, clicks, snares, inward sounds. Headphones help
-                if you’ll play a beat while recording.
+                {r.intro}
               </p>
               <button
                 type="button"
@@ -206,7 +209,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
                 disabled={rec.status === 'requesting'}
                 className="justify-self-start rounded-full bg-ink px-5 py-2.5 text-paper outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal disabled:opacity-60"
               >
-                {rec.status === 'requesting' ? 'Waiting for permission…' : 'Turn on microphone'}
+                {rec.status === 'requesting' ? r.waiting : r.micOn}
               </button>
             </div>
           )}
@@ -215,7 +218,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
             <>
               {rec.devices.length > 1 && (
                 <label className="grid gap-1 text-sm">
-                  <span className="text-muted">Microphone</span>
+                  <span className="text-muted">{r.microphone}</span>
                   <select
                     value={rec.deviceId}
                     onChange={(e) => rec.selectDevice(e.target.value)}
@@ -224,7 +227,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
                   >
                     {rec.devices.map((d, i) => (
                       <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Input ${i + 1}`}
+                        {d.label || r.input(i + 1)}
                       </option>
                     ))}
                   </select>
@@ -247,7 +250,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
                     type="button"
                     onClick={() => rec.stop()}
                     className="grid size-16 place-items-center rounded-full border-4 border-sub outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal"
-                    aria-label="Stop recording"
+                    aria-label={r.stop}
                   >
                     <span className="size-5 rounded-sm bg-sub" />
                   </button>
@@ -257,7 +260,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
                     onClick={() => setCountdown(3)}
                     disabled={countdown !== null}
                     className="grid size-16 place-items-center rounded-full border-4 border-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal disabled:opacity-60"
-                    aria-label="Start recording"
+                    aria-label={r.start}
                   >
                     <span className="size-8 rounded-full bg-sub" />
                   </button>
@@ -266,19 +269,19 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
                 <div className="grid min-w-48 flex-1 gap-2">
                   <p className="num text-2xl" aria-live="polite">
                     {countdown !== null
-                      ? `Starting in ${countdown}`
+                      ? r.startingIn(countdown)
                       : `${formatTime(rec.elapsedMs / 1000)} / ${formatTime(maxSeconds)}`}
                   </p>
                   <div className="h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
                     <div className="h-full bg-ink" style={{ width: `${progress * 100}%` }} />
                   </div>
-                  <p className="text-sm text-muted">Recording stops by itself at {maxSeconds} seconds.</p>
+                  <p className="text-sm text-muted">{r.autoStop(maxSeconds)}</p>
                 </div>
               </div>
             </>
           )}
 
-          {rec.status === 'processing' && <p role="status">Preparing your take…</p>}
+          {rec.status === 'processing' && <p role="status">{r.preparing}</p>}
           {rec.error && <p className="text-loss" role="alert">{rec.error}</p>}
         </div>
       )}
@@ -286,10 +289,9 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
       {mode === 'upload' && !uploaded && (
         <div className="grid gap-3">
           <label className="grid cursor-pointer place-items-center gap-2 rounded-xl border-2 border-dashed border-line px-6 py-10 text-center focus-within:outline-2 focus-within:outline-signal">
-            <span className="text-lg">Choose an audio file</span>
+            <span className="text-lg">{r.chooseFile}</span>
             <span className="max-w-prose text-sm text-muted">
-              WAV or FLAC keeps every detail of your sound. MP3 and M4A work too, but anything their encoder already
-              removed can’t come back. Up to {maxSeconds} seconds.
+              {r.fileHint(maxSeconds)}
             </span>
             <input
               type="file"
@@ -298,18 +300,18 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
           </label>
-          {uploadState === 'analyzing' && <p role="status">Reading your file…</p>}
+          {uploadState === 'analyzing' && <p role="status">{r.reading}</p>}
           {uploadError && <p className="text-loss" role="alert">{uploadError}</p>}
         </div>
       )}
 
       {take && previewUrl && (
         <div className="grid gap-4">
-          <WaveformPlayer src={previewUrl} waveform={take.analysis.waveform} durationMs={take.analysis.durationMs} label="your take" />
+          <WaveformPlayer src={previewUrl} waveform={take.analysis.waveform} durationMs={take.analysis.durationMs} label={r.yourTake} />
           <TakeDetails take={take} />
           {!take.isLossless && (
             <p className="text-sm text-muted">
-              This is a compressed file. It will be stored exactly as uploaded, with no second round of compression.
+              {r.compressedNote}
             </p>
           )}
           {submitError && <p className="text-loss" role="alert">{submitError}</p>}
@@ -320,7 +322,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
               disabled={submitting}
               className="rounded-full bg-ink px-5 py-2.5 text-paper outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal disabled:opacity-60"
             >
-              {submitting ? 'Submitting…' : submitLabel}
+              {submitting ? r.submitting : submitLabel ?? r.submitRound}
             </button>
             <button
               type="button"
@@ -328,7 +330,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
               disabled={submitting}
               className="rounded-full border border-line px-5 py-2.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-signal"
             >
-              {mode === 'record' ? 'Record again' : 'Choose another file'}
+              {mode === 'record' ? r.recordAgain : r.chooseAnother}
             </button>
           </div>
         </div>
