@@ -12,6 +12,7 @@ import Countdown from '@/components/Countdown';
 import LiveRoom from './LiveRoom';
 import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
+import BadgeChip from '@/components/badges/BadgeChip';
 import { flagEmoji, hoursText, intervalHours, signed } from '@/lib/format';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
 
@@ -47,6 +48,7 @@ function PlayerHeader({ p, align, isWinner, eloDelta }: {
         <p className="text-muted">
           <span aria-hidden="true">{flagEmoji(p.country)} </span>
           <span className="num text-ink">{p.elo_rating}</span> rating
+          {p.featured_badge && <span className="ml-2"><BadgeChip code={p.featured_badge} compact /></span>}
           {eloDelta != null && (
             <span className={`num ml-2 ${eloDelta >= 0 ? 'text-win' : 'text-loss'}`}>{signed(eloDelta)}</span>
           )}

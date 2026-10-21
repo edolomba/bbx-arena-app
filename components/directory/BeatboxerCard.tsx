@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
+import BadgeChip from '@/components/badges/BadgeChip';
 import { countryName, flagEmoji, formatAgo } from '@/lib/format';
 import type { DirectoryEntry, ProfileBattle } from '@/lib/types';
 
@@ -46,6 +47,7 @@ export default function BeatboxerCard({ entry, recent }: { entry: DirectoryEntry
           <h3 className="handle truncate text-xl leading-tight">
             <Link href={`/beatboxers/${entry.username}`} className="underline-offset-4 hover:underline">@{entry.username}</Link>
           </h3>
+          {entry.featured_badge && <p className="mt-0.5"><BadgeChip code={entry.featured_badge} compact /></p>}
           {entry.full_name && <p className="truncate text-muted">{entry.full_name}</p>}
           {entry.country && (
             <p className="text-sm text-muted"><span aria-hidden="true">{flagEmoji(entry.country)} </span>{countryName(entry.country)}</p>

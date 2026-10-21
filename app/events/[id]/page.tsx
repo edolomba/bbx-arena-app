@@ -41,7 +41,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   let stage: React.ReactNode = null;
   if (event.current_battle_id) {
     const bid = event.current_battle_id as string;
-    const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+    const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
     const [{ data: b }, { data: subs2 }, { data: votes }, { data: bj }, { data: jv }] = await Promise.all([
       supabase.from('battles').select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), host:profiles!battles_host_id_fkey(username)`).eq('id', bid).maybeSingle(),
       supabase.from('submissions').select('*').eq('battle_id', bid).order('round_number'),

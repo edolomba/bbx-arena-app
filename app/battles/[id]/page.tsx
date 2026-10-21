@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import BattleView from '@/components/battle/BattleView';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, Submission, Vote } from '@/lib/types';
 
-const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 
 export const dynamic = 'force-dynamic';
 

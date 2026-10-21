@@ -5,7 +5,7 @@ import BattleRow from '@/components/battle/BattleRow';
 import type { BattleWithPlayers, EventRow } from '@/lib/types';
 
 export const metadata = { title: 'My events' };
-const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 
 export default async function MyEventsPage() {
   const supabase = await createClient();

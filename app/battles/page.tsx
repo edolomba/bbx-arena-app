@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import type { BattleWithPlayers } from '@/lib/types';
 
-const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 const SELECT = `*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER})`;
 
 const TABS = {

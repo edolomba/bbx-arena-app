@@ -26,6 +26,10 @@ export function notificationText(n: AppNotification): string {
       return `${who} invited you to judge a stage battle on ${when(d.starts_at)}`;
     case 'host_invited':
       return `${who} asked you to host a stage battle on ${when(d.starts_at)}`;
+    case 'badge_earned': {
+      const where = d.event ? ` at “${d.event}”` : d.season ? ` in ${d.season}` : '';
+      return `New badge: ${d.name ?? 'a badge'}${where}`;
+    }
     case 'event_judge_invited':
       return `${who} invited you to judge “${d.title ?? 'an event'}”`;
     case 'event_update': {
@@ -48,5 +52,6 @@ export function notificationText(n: AppNotification): string {
 }
 
 /** Where tapping a notification goes. */
-export const notificationHref = (n: { battle_id: string | null; event_id?: string | null }) =>
-  n.event_id ? `/events/${n.event_id}` : n.battle_id ? `/battles/${n.battle_id}` : '/notifications';
+export const notificationHref = (n: { kind?: string; battle_id: string | null; event_id?: string | null; data?: { username?: string } }) =>
+  n.kind === 'badge_earned' && n.data?.username ? `/beatboxers/${n.data.username}#badges`
+    : n.event_id ? `/events/${n.event_id}` : n.battle_id ? `/battles/${n.battle_id}` : '/notifications';

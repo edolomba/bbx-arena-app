@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import { flagEmoji } from '@/lib/format';
+import BadgeChip from '@/components/badges/BadgeChip';
 import type { BattleWithPlayers, DirectoryEntry } from '@/lib/types';
 
-const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 const SELECT = `*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER})`;
 
 export default async function Home() {
@@ -72,6 +73,7 @@ export default async function Home() {
                 <span className="num text-muted">{i + 1}</span>
                 <Link href={`/beatboxers/${p.username}`} className="handle truncate underline-offset-4 hover:underline">
                   <span aria-hidden="true">{flagEmoji(p.country)} </span>@{p.username}
+                  {p.featured_badge && <span className="ml-2"><BadgeChip code={p.featured_badge} compact /></span>}
                 </Link>
                 <span className="num text-xl">{p.elo_rating}</span>
               </li>

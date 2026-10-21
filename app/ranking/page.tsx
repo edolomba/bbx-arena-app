@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { flagEmoji, formatDate, formatRemaining } from '@/lib/format';
 import type { LeaderboardRow, ScoringRules, Season } from '@/lib/types';
+import BadgeChip from '@/components/badges/BadgeChip';
 
 export const metadata = { title: 'Ranking' };
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ function nextWeeklyReset(now = new Date()): Date {
 
 const pts = (n: number) => `${n > 0 ? '' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('en')}`;
 
-function Row({ r, me }: { r: LeaderboardRow; me: boolean }) {
+function Row({ r, me, badge }: { r: LeaderboardRow; me: boolean; badge?: string | null }) {
   return (
     <tr
       id={me ? 'me' : undefined}
@@ -37,6 +38,7 @@ function Row({ r, me }: { r: LeaderboardRow; me: boolean }) {
         <Link href={`/beatboxers/${r.username}`} className="handle underline-offset-4 hover:underline">
           <span aria-hidden="true">{flagEmoji(r.country)} </span>@{r.username}
         </Link>
+        {badge && <span className="ml-2"><BadgeChip code={badge} compact /></span>}
         {me && <span className="ml-2 rounded-full bg-sub px-2 py-0.5 text-xs font-bold text-paper">You</span>}
       </td>
       <td className="num py-3 pr-3 text-right text-xl">{pts(r.points)}</td>
@@ -68,6 +70,9 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const season = seasonRes.data as Season | null;
   const rules = rulesRes.data as ScoringRules | null;
   const meInList = mine != null && board.some((r) => r.profile_id === mine.profile_id);
+  const ids = [...board.map((r) => r.profile_id), ...(mine ? [mine.profile_id] : [])];
+  const { data: badgeRows } = ids.length ? await supabase.from('profiles').select('id, featured_badge').in('id', ids) : { data: [] };
+  const badgeOf = new Map((badgeRows ?? []).map((b) => [b.id as string, b.featured_badge as string | null]));
 
   let periodNote: string;
   if (tab === 'week') periodNote = `Since Monday 00:00 UTC. Resets in ${formatRemaining(nextWeeklyReset().getTime() - Date.now())}.`;
@@ -148,11 +153,11 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
               </tr>
             </thead>
             <tbody>
-              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} />)}
+              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} badge={badgeOf.get(r.profile_id)} />)}
               {mine && !meInList && (
                 <>
                   <tr aria-hidden="true"><td colSpan={5} className="py-1 text-center text-muted">⋯</td></tr>
-                  <Row r={mine} me />
+                  <Row r={mine} me badge={badgeOf.get(mine.profile_id)} />
                 </>
               )}
             </tbody>

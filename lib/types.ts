@@ -39,6 +39,7 @@ export interface ProfileSummary {
   avatar_url: string | null;
   country: string | null;
   elo_rating: number;
+  featured_badge?: string | null;
 }
 
 export interface DirectoryEntry extends ProfileSummary {
@@ -55,6 +56,7 @@ export interface DirectoryEntry extends ProfileSummary {
   win_rate: number | null;
   global_rank: number;
   created_at: string;
+  featured_badge?: string | null;
 }
 
 export interface Battle {
@@ -190,7 +192,7 @@ export interface ScoringRules {
 export type NotificationKind =
   | 'challenge_received' | 'challenge_accepted' | 'challenge_declined'
   | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result'
-  | 'judge_invited' | 'host_invited' | 'event_judge_invited' | 'event_update';
+  | 'judge_invited' | 'host_invited' | 'event_judge_invited' | 'event_update' | 'badge_earned';
 
 export interface AppNotification {
   id: string;
@@ -207,6 +209,11 @@ export interface AppNotification {
     forfeited_by_me?: boolean;
     elo_delta?: number | null;
     title?: string;
+    badge?: string;
+    name?: string;
+    username?: string;
+    event?: string;
+    season?: string;
     what?: 'eliminations_started' | 'paused' | 'resumed' | 'judging' | 'published';
     next_session_at?: string | null;
   };

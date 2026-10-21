@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import RatingChart from '@/components/profile/RatingChart';
 import ReportButton from '@/components/moderation/ReportButton';
+import BadgeChip from '@/components/badges/BadgeChip';
+import BadgeShelf, { type EarnedBadge } from '@/components/badges/BadgeShelf';
 import { Avatar } from '@/components/directory/BeatboxerCard';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
 import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, signed } from '@/lib/format';
 import type { BattleWithPlayers, DirectoryEntry, ProfileBattle } from '@/lib/types';
 
-const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating';
+const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 const OUTCOME = { W: 'Won', L: 'Lost', D: 'Drew' } as const;
 const resultText = (g: ProfileBattle) =>
   g.result === 'forfeit' ? `${OUTCOME[g.outcome]} by forfeit` : g.outcome === 'D' ? 'Draw' : `${OUTCOME[g.outcome]} by decision`;
@@ -27,7 +29,7 @@ export default async function ProfilePage({ params, searchParams }: {
   if (!p) notFound();
   const profile = p as DirectoryEntry;
 
-  const [{ data: rows }, { data: liveRows }, { data: auth }, { count: total }] = await Promise.all([
+  const [{ data: rows }, { data: liveRows }, { data: auth }, { count: total }, { data: badgeRows }] = await Promise.all([
     supabase.from('profile_battles').select('*').eq('profile_id', profile.id).order('finished_at', { ascending: true }),
     supabase
       .from('battles')
@@ -37,6 +39,7 @@ export default async function ProfilePage({ params, searchParams }: {
       .order('created_at', { ascending: false }),
     supabase.auth.getUser(),
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('profile_badges').select('badge_code, context, earned_at').eq('profile_id', profile.id).order('earned_at', { ascending: false }),
   ]);
   const games = (rows ?? []) as ProfileBattle[];
   const live = (liveRows ?? []) as BattleWithPlayers[];
@@ -85,6 +88,7 @@ export default async function ProfilePage({ params, searchParams }: {
         <Avatar username={profile.username} url={profile.avatar_url} size="lg" />
         <div className="grid min-w-0 flex-1 gap-2">
           <h1 className="handle text-[clamp(2rem,6vw,4rem)] leading-none break-all">@{profile.username}</h1>
+          {profile.featured_badge && <p><BadgeChip code={profile.featured_badge} /></p>}
           <p className="flex flex-wrap gap-x-5 gap-y-1 text-muted">
             {profile.full_name && <span>{profile.full_name}</span>}
             {profile.country && <span><span aria-hidden="true">{flagEmoji(profile.country)} </span>{countryName(profile.country)}</span>}
@@ -115,6 +119,8 @@ export default async function ProfilePage({ params, searchParams }: {
           </div>
         ))}
       </dl>
+
+      <BadgeShelf earned={(badgeRows ?? []) as EarnedBadge[]} isMe={isMe} />
 
       {live.length > 0 && (
         <section className="grid gap-3">
