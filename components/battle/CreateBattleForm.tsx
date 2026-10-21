@@ -95,7 +95,7 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
   const modes = [
     { value: 'async' as const, title: 'Take turns', text: 'Each of you records on your own time. People listen and vote whenever they like.' },
     { value: 'live' as const, title: 'Live premiere', text: 'You both record before a set time. The rounds premiere together for everyone in the room.' },
-    { value: 'stage' as const, title: 'Stage, real time', text: 'Mic to mic, run by a host, judged on the spot. Everyone hears it as it happens, with the bass intact.' },
+    { value: 'stage' as const, title: 'Stage, real time', text: 'Mic to mic, run by a host, judged on the spot. Everyone hears it as it happens, in full quality.' },
   ];
 
   return (

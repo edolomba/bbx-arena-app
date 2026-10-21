@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'BBX Arena', template: '%s · BBX Arena' },
-  description: '1v1 beatbox battles with the bass intact. Profiles, ratings, live battles and public votes.',
+  description: '1v1 beatbox battles in real studio quality. Profiles, ratings, live battles, tournaments and public votes.',
   icons: { icon: '/icon-192.png', apple: '/apple-icon.png' },
   appleWebApp: { capable: true, title: 'BBX Arena', statusBarStyle: 'black-translucent' },
 };

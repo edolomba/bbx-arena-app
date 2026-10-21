@@ -197,7 +197,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
           {(rec.status === 'idle' || rec.status === 'error' || rec.status === 'requesting') && (
             <div className="grid gap-3">
               <p className="max-w-prose text-muted">
-                Your browser’s voice filters get switched off so your low end is recorded as it is. Headphones help
+                Your browser’s voice filters get switched off, so every sound is recorded as you make it: bass, clicks, snares, inward sounds. Headphones help
                 if you’ll play a beat while recording.
               </p>
               <button
@@ -288,7 +288,7 @@ export default function AudioRecorder({ maxSeconds, onSubmit, submitLabel = 'Sub
           <label className="grid cursor-pointer place-items-center gap-2 rounded-xl border-2 border-dashed border-line px-6 py-10 text-center focus-within:outline-2 focus-within:outline-signal">
             <span className="text-lg">Choose an audio file</span>
             <span className="max-w-prose text-sm text-muted">
-              WAV or FLAC keeps every bit of your bass. MP3 and M4A work too, but anything their encoder already
+              WAV or FLAC keeps every detail of your sound. MP3 and M4A work too, but anything their encoder already
               removed can’t come back. Up to {maxSeconds} seconds.
             </span>
             <input

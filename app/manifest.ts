@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'BBX Arena',
     short_name: 'BBX Arena',
-    description: '1v1 beatbox battles with the bass intact.',
+    description: '1v1 beatbox battles in real studio quality.',
     start_url: '/',
     display: 'standalone',
     background_color: '#13152b',

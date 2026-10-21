@@ -260,7 +260,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
               {connecting ? 'Opening the room…' : isPerformer ? 'Enter the stage' : 'Enter to listen'}
             </button>
             <p className="text-sm text-muted">
-              {isPerformer ? 'Use headphones. Your mic only opens when the host calls you.' : 'Sound starts after you enter.'}
+              {isPerformer ? <>Use headphones. Your mic only opens when the host calls you. <a href="/mic-check" target="_blank" className="underline underline-offset-4">Run a mic check</a> first.</> : 'Sound starts after you enter.'}
             </p>
           </div>
         )}

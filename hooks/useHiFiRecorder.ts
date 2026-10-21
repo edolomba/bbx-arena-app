@@ -117,13 +117,13 @@ export function useHiFiRecorder({ maxSeconds, bitDepth = 24 }: Options) {
 
         const w: string[] = [];
         if (s.noiseSuppression)
-          w.push('Your browser kept noise suppression on. It strips sustained bass, so use Chrome or Firefox on desktop if your low end sounds thin.');
+          w.push('Your browser kept noise suppression on. It cuts sustained sounds like bass and inward sounds, and smears fast clicks. Chrome or Firefox on desktop usually let us turn it off.');
         if (s.autoGainControl)
           w.push('Your browser kept automatic gain on. Expect the volume to duck after heavy bass hits.');
         if (s.echoCancellation)
           w.push('Echo cancellation is still on. Use headphones and it will interfere less.');
         if (/hands-?free|headset|airpods|bluetooth|bt /i.test(track.label))
-          w.push('This looks like a Bluetooth headset mic. Bluetooth call audio drops almost all low end; use a wired or USB mic.');
+          w.push('This looks like a Bluetooth headset mic. Bluetooth call audio is low quality: it loses bass and highs. Use a wired or USB mic.');
         setWarnings(w);
 
         const inputs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');

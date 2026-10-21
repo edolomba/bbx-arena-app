@@ -14,10 +14,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'The live audio service isn’t set up yet.' }, { status: 500 });
   }
 
-  const { battleId, eventId } = (await request.json().catch(() => ({}))) as { battleId?: string; eventId?: string };
-  if (!battleId && !eventId) return NextResponse.json({ error: 'Missing battle.' }, { status: 400 });
+  const { battleId, eventId, micTest } = (await request.json().catch(() => ({}))) as {
+    battleId?: string; eventId?: string; micTest?: 'send' | 'listen';
+  };
+  if (!battleId && !eventId && !micTest) return NextResponse.json({ error: 'Missing battle.' }, { status: 400 });
 
   const supabase = await createClient();
+
+  // Mic check: a private room where your own browser sends and listens back,
+  // over the same server and settings as a real stage.
+  if (micTest) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Log in to test your live connection.' }, { status: 401 });
+    const token = new AccessToken(key, secret, { identity: `${user.id}:${micTest}`, name: micTest, ttl: '15m' });
+    token.addGrant({
+      room: `mictest-${user.id}`, roomJoin: true, canSubscribe: true, canPublish: micTest === 'send', canPublishData: false,
+      canPublishSources: micTest === 'send' ? [TrackSource.MICROPHONE] : [],
+    });
+    return NextResponse.json({ token: await token.toJwt(), url });
+  }
 
   // Event rooms: every registered beatboxer may publish (they're only audible when called).
   if (eventId) {

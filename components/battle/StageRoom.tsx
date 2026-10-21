@@ -386,8 +386,8 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
               {connecting ? 'Opening the room…' : isPerformer ? 'Enter the stage' : isHost ? 'Enter as host' : isJudge ? 'Enter as judge' : 'Enter to listen'}
             </button>
             <p className="text-sm text-muted">
-              {isPerformer ? 'Use headphones and enter a few minutes early to check your levels. Your mic only opens on your round.'
-                : 'Sound starts after you enter. Headphones or good speakers: there’s a lot of low end.'}
+              {isPerformer ? <>Use headphones and enter a few minutes early. Your mic only opens on your round. <a href="/mic-check" target="_blank" className="underline underline-offset-4">Run a mic check</a> first.</>
+                : 'Sound starts after you enter. Use headphones or good speakers to hear every detail.'}
             </p>
           </div>
         )}
