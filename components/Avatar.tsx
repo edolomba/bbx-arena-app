@@ -5,6 +5,8 @@ const SIZES = {
   md: 'size-12 text-lg',
   lg: 'size-20 text-3xl',
   xl: 'size-28 text-4xl',
+  podium: 'size-16 text-2xl sm:size-28 sm:text-4xl',
+  podiumSide: 'size-14 text-xl sm:size-20 sm:text-3xl',
 } as const;
 
 const RINGS = {

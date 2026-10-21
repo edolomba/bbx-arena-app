@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { flagEmoji, formatDate } from '@/lib/format';
 import type { LeaderboardRow, ScoringRules, Season } from '@/lib/types';
 import BadgeChip from '@/components/badges/BadgeChip';
+import Avatar from '@/components/Avatar';
+import RatingBoard from '@/components/ranking/RatingBoard';
 import { getT } from '@/lib/i18n/server';
 import { LOCALE_TAG } from '@/lib/i18n/config';
 
@@ -10,6 +12,7 @@ export const metadata = { title: 'Ranking' };
 export const dynamic = 'force-dynamic';
 
 const TABS = {
+  rating: { label: 'rating', period: 'rating' },
   week: { label: 'week', period: 'weekly' },
   season: { label: 'season', period: 'season' },
   all: { label: 'all', period: 'all' },
@@ -28,7 +31,7 @@ function nextWeeklyReset(now = new Date()): Date {
 
 const pts = (n: number) => `${n > 0 ? '' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('en').replace(/,/g, '\u202f')}`;
 
-function Row({ r, me, badge, youLabel }: { r: LeaderboardRow; me: boolean; badge?: string | null; youLabel: string }) {
+function Row({ r, me, badge, avatar, youLabel }: { r: LeaderboardRow; me: boolean; badge?: string | null; avatar?: string | null; youLabel: string }) {
   return (
     <tr
       id={me ? 'me' : undefined}
@@ -37,8 +40,9 @@ function Row({ r, me, badge, youLabel }: { r: LeaderboardRow; me: boolean; badge
     >
       <td className={`num py-3 pr-3 pl-3 text-right ${r.rank <= 3 ? 'text-2xl' : 'text-lg text-muted'}`}>{r.rank}</td>
       <td className="py-3 pr-3">
-        <Link href={`/beatboxers/${r.username}`} className="handle underline-offset-4 hover:underline">
-          <span aria-hidden="true">{flagEmoji(r.country)} </span>@{r.username}
+        <Link href={`/beatboxers/${r.username}`} className="inline-flex items-center gap-3 font-bold underline-offset-4 hover:underline">
+          <Avatar username={r.username} url={avatar} size="sm" ring={r.rank === 1 ? 'gold' : r.rank <= 10 ? 'elite' : 'none'} />
+          <span><span aria-hidden="true">{flagEmoji(r.country)} </span>{r.username}</span>
         </Link>
         {badge && <span className="ml-2"><BadgeChip code={badge} compact /></span>}
         {me && <span className="ml-2 rounded-full bg-sub px-2 py-0.5 text-xs font-bold text-paper">{youLabel}</span>}
@@ -56,7 +60,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const tag = LOCALE_TAG[locale];
   const remaining = (ms: number) => { const mins = Math.max(0, Math.floor(ms / 60000)); return t.remaining(Math.floor(mins / 1440), Math.floor((mins % 1440) / 60), mins % 60); };
   const { tab: rawTab } = await searchParams;
-  const tab: Tab = rawTab && rawTab in TABS ? (rawTab as Tab) : 'week';
+  const tab: Tab = rawTab && rawTab in TABS ? (rawTab as Tab) : 'rating';
   const period = TABS[tab].period;
   const nowIso = new Date().toISOString();
 
@@ -64,8 +68,8 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const { data: { user } } = await supabase.auth.getUser();
 
   const [boardRes, meRes, seasonRes, rulesRes] = await Promise.all([
-    supabase.rpc('leaderboard', { p_period: period, p_limit: SHOWN, p_offset: 0 }),
-    user ? supabase.rpc('my_leaderboard_position', { p_period: period }) : Promise.resolve({ data: null }),
+    tab === 'rating' ? Promise.resolve({ data: [] }) : supabase.rpc('leaderboard', { p_period: period, p_limit: SHOWN, p_offset: 0 }),
+    user && tab !== 'rating' ? supabase.rpc('my_leaderboard_position', { p_period: period }) : Promise.resolve({ data: null }),
     supabase.from('seasons').select('*').lte('starts_at', nowIso).gt('ends_at', nowIso)
       .order('starts_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('scoring_rules').select('win, loss, draw, forfeit, forfeit_win').maybeSingle(),
@@ -77,8 +81,9 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const rules = rulesRes.data as ScoringRules | null;
   const meInList = mine != null && board.some((r) => r.profile_id === mine.profile_id);
   const ids = [...board.map((r) => r.profile_id), ...(mine ? [mine.profile_id] : [])];
-  const { data: badgeRows } = ids.length ? await supabase.from('profiles').select('id, featured_badge').in('id', ids) : { data: [] };
+  const { data: badgeRows } = ids.length ? await supabase.from('profiles').select('id, featured_badge, avatar_url').in('id', ids) : { data: [] };
   const badgeOf = new Map((badgeRows ?? []).map((b) => [b.id as string, b.featured_badge as string | null]));
+  const avatarOf = new Map((badgeRows ?? []).map((b) => [b.id as string, (b as { avatar_url: string | null }).avatar_url]));
 
   let periodNote: string;
   if (tab === 'week') periodNote = t.weekNote(remaining(nextWeeklyReset().getTime() - Date.now()));
@@ -87,6 +92,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
       ? t.seasonNote(season.name, formatDate(season.starts_at, tag), formatDate(season.ends_at, tag), remaining(new Date(season.ends_at).getTime() - Date.now()))
       : t.noSeason;
   else periodNote = t.allNote;
+  if (tab === 'rating') periodNote = '';
 
   const emptyText =
     tab === 'season' && !season ? t.emptySeason
@@ -104,15 +110,16 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
         {(Object.keys(TABS) as Tab[]).map((key) => (
           <Link
             key={key}
-            href={key === 'week' ? '/ranking' : `/ranking?tab=${key}`}
+            href={key === 'rating' ? '/ranking' : `/ranking?tab=${key}`}
             aria-current={key === tab ? 'page' : undefined}
-            className={`rounded-full px-4 py-1.5 text-sm ${key === tab ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}
+            className={`rounded-full px-4 py-1.5 text-sm ${key === tab ? 'bg-ink text-paper' : 'border border-line text-muted hover:text-ink'}`}
           >
-            {t[TABS[key].label]}
+            {key === 'rating' ? all.board.tab : t[TABS[key].label as 'week' | 'season' | 'all']}
           </Link>
         ))}
       </nav>
 
+      {tab === 'rating' ? <RatingBoard /> : (<>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="text-sm text-muted">{periodNote}</p>
         {mine && meInList && mine.rank > 8 && (
@@ -159,11 +166,11 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
               </tr>
             </thead>
             <tbody>
-              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} badge={badgeOf.get(r.profile_id)} youLabel={t.you} />)}
+              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} badge={badgeOf.get(r.profile_id)} avatar={avatarOf.get(r.profile_id)} youLabel={t.you} />)}
               {mine && !meInList && (
                 <>
                   <tr aria-hidden="true"><td colSpan={5} className="py-1 text-center text-muted">⋯</td></tr>
-                  <Row r={mine} me badge={badgeOf.get(mine.profile_id)} youLabel={t.you} />
+                  <Row r={mine} me badge={badgeOf.get(mine.profile_id)} avatar={avatarOf.get(mine.profile_id)} youLabel={t.you} />
                 </>
               )}
             </tbody>
@@ -193,6 +200,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
           </p>
         </section>
       )}
+      </>)}
     </main>
   );
 }
