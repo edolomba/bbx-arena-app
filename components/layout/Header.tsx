@@ -29,8 +29,9 @@ export default async function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-paper/80 backdrop-blur-md">
       <div className="mx-auto flex h-15 max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
-        <Link href="/" className="handle mr-2 text-lg whitespace-nowrap">
-          BBX Arena<span className="text-sub">.</span>
+        <Link href="/" aria-label="Beatbox Arena" className="mr-2 shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Beatbox Arena" width={142} height={36} className="h-8 w-auto sm:h-9" />
         </Link>
         <nav aria-label="Sections" className="hidden min-w-0 gap-1 text-sm md:flex">{sections}</nav>
         <div className="ml-auto flex items-center gap-2 text-sm">

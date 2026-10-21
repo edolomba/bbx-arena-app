@@ -43,7 +43,7 @@ export default async function Home() {
       <section className="grid gap-5">
         <h1 className="handle max-w-[14ch] text-[clamp(2.75rem,8vw,6rem)] leading-[0.95]">
           {t.home.title}{' '}
-          <span className="bg-gradient-to-r from-sub to-signal bg-clip-text text-transparent">{t.home.titleAccent}</span>
+          <span className="bg-gradient-to-r from-gold via-gold to-sub bg-clip-text text-transparent">{t.home.titleAccent}</span>
         </h1>
         <p className="max-w-[56ch] text-lg text-muted">
           {t.home.lead}

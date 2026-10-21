@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next';
 /** Lets people add BBX Arena to their home screen (required for push on iPhone). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'BBX Arena',
+    name: 'Beatbox Arena',
     short_name: 'BBX Arena',
     description: '1v1 beatbox battles in real studio quality.',
     start_url: '/',

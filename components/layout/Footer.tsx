@@ -8,7 +8,8 @@ export default async function Footer() {
   return (
     <footer className="mt-16 border-t border-line">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-6 text-sm text-muted sm:px-6">
-        <span className="handle text-ink">BBX Arena<span className="text-sub">.</span></span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="Beatbox Arena" width={95} height={24} className="h-6 w-auto opacity-90" />
         <Link href="/mic-check" className="hover:text-ink">{t.footer.micCheck}</Link>
         <Link href="/terms" className="hover:text-ink">{t.footer.terms}</Link>
         <Link href="/privacy" className="hover:text-ink">{t.footer.privacy}</Link>

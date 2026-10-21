@@ -2,9 +2,9 @@
 
 /*
   Stage palette, dark only. Near-black room, cards lit from above.
-  Magenta is the brand and still marks sub-bass in every waveform;
-  electric blue carries the full-band signal and data; gold is for the
-  number one and champions.
+  Gold (from the logo) is the brand: primary buttons, the number one,
+  champions. Magenta supports it: ELITE, highlights, and sub-bass in every
+  waveform. Electric blue carries the full-band signal and data.
 */
 :root {
   --paper: #0a0a0d;
@@ -15,7 +15,7 @@
   --line: #2a2a33;
   --signal: #6f8cff;
   --sub: #ff4fa3;
-  --gold: #f5b82e;
+  --gold: #d5ac11;     /* from the Beatbox Arena logo */
   --win: #3ddc84;
   --loss: #ff6060;
   --wave-signal: var(--signal);
@@ -78,7 +78,8 @@ body {
 
 /* A soft stage light from above on the page background. */
 body {
-  background-image: radial-gradient(120% 60% at 50% -10%, color-mix(in srgb, var(--sub) 9%, transparent), transparent 60%);
+  background-image: radial-gradient(70% 50% at 30% -10%, color-mix(in srgb, var(--gold) 9%, transparent), transparent 60%),
+    radial-gradient(60% 45% at 80% -15%, color-mix(in srgb, var(--sub) 7%, transparent), transparent 60%);
   background-attachment: fixed;
 }
 
@@ -86,10 +87,14 @@ body {
   background: color-mix(in srgb, var(--sub) 45%, transparent);
 }
 
-/* Primary buttons (white on dark) pick up a pink glow on hover. */
+/* Primary buttons wear the logo gold (dark text), with a warm glow on hover. */
 a.bg-ink, button.bg-ink {
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  background-color: var(--gold);
+  color: var(--paper);
+  font-weight: 600;
+  transition: box-shadow 0.2s ease, filter 0.2s ease;
 }
 a.bg-ink:hover, button.bg-ink:not(:disabled):hover {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sub) 35%, transparent), 0 8px 30px -8px var(--sub);
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 35%, transparent), 0 8px 30px -8px var(--gold);
 }

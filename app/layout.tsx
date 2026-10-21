@@ -6,9 +6,9 @@ import { getLocale } from '@/lib/i18n/server';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'BBX Arena', template: '%s · BBX Arena' },
+  title: { default: 'Beatbox Arena', template: '%s · Beatbox Arena' },
   description: '1v1 beatbox battles in real studio quality. Profiles, ratings, live battles, tournaments and public votes.',
-  icons: { icon: '/icon-192.png', apple: '/apple-icon.png' },
+  icons: { icon: [{ url: '/favicon-48.png', sizes: '48x48' }, { url: '/icon-192.png', sizes: '192x192' }], apple: '/apple-icon.png' },
   appleWebApp: { capable: true, title: 'BBX Arena', statusBarStyle: 'black-translucent' },
 };
 
