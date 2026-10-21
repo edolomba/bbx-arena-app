@@ -695,6 +695,12 @@ export const it: Dict = {
     lastBattle: 'Ultima battle:',
     noBattles: 'Nessuna battle conclusa ancora.',
     loadFailed: (m) => `L’elenco non si è caricato: ${m}. Ricarica per riprovare.`,
+    top: 'Top',
+    topLead: (n) => `I ${n} beatboxer più attivi. Scegli una lettera per vederli tutti dalla A alla Z.`,
+    letterLead: (l, n) => `${n} beatboxer che iniziano con ${l}.`,
+    searchLead: (q, n) => `${n} ${n === 1 ? 'risultato' : 'risultati'} per “${q}”.`,
+    battlesN: (n) => (n === 1 ? '1 battle' : `${n} battle`),
+    searchBig: 'Cerca un beatboxer per nome o utente…',
     seeStats: 'Vedi statistiche e battle',
   },
   profile: {

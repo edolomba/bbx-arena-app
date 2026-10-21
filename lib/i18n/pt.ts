@@ -695,6 +695,12 @@ export const pt: Dict = {
     lastBattle: 'Última batalha:',
     noBattles: 'Nenhuma batalha finalizada ainda.',
     loadFailed: (m) => `A lista não carregou: ${m}. Atualize a página para tentar de novo.`,
+    top: 'Top',
+    topLead: (n) => `Os ${n} beatboxers mais ativos. Escolha uma letra para ver todos de A a Z.`,
+    letterLead: (l, n) => `${n} ${n === 1 ? 'beatboxer começa' : 'beatboxers começam'} com ${l}.`,
+    searchLead: (q, n) => `${n} ${n === 1 ? 'resultado' : 'resultados'} para “${q}”.`,
+    battlesN: (n) => (n === 1 ? '1 batalha' : `${n} batalhas`),
+    searchBig: 'Buscar um beatboxer por nome ou usuário…',
     seeStats: 'Ver estatísticas e batalhas',
   },
   profile: {

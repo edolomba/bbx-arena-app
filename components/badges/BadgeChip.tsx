@@ -20,10 +20,18 @@ function Icon({ category }: { category: string }) {
 }
 
 /** A badge. `compact` is the small mark shown next to a handle. */
-export default function BadgeChip({ code, compact = false }: { code: string | null | undefined; compact?: boolean }) {
+export default function BadgeChip({ code, compact = false, iconOnly = false }: { code: string | null | undefined; compact?: boolean; iconOnly?: boolean }) {
   const t = useI18n().t.badges;
   if (!code || !BADGES[code]) return null;
   const b = BADGES[code];
+  if (iconOnly) {
+    return (
+      <span title={`${b.name}: ${t.desc[code] ?? b.description}`} aria-label={b.name}
+        className={`inline-grid size-5 shrink-0 place-items-center rounded-full align-middle ${STYLE[b.rarity]}`}>
+        <Icon category={b.category} />
+      </span>
+    );
+  }
   return (
     <span title={`${b.name}: ${t.desc[code] ?? b.description} (${t.rarity[b.rarity]})`}
       className={`inline-flex items-center gap-1 rounded-full align-middle font-sans font-semibold whitespace-nowrap [font-stretch:100%] ${STYLE[b.rarity]} ${

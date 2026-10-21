@@ -699,6 +699,12 @@ export const en = {
     lastBattle: 'Last battle:',
     noBattles: 'No finished battles yet.',
     loadFailed: (m: string) => `The directory didn’t load: ${m}. Refresh to try again.`,
+    top: 'Top',
+    topLead: (n: number) => `The ${n} most active beatboxers. Pick a letter for the full A–Z.`,
+    letterLead: (l: string, n: number) => `${n} ${n === 1 ? 'beatboxer' : 'beatboxers'} starting with ${l}.`,
+    searchLead: (q: string, n: number) => `${n} ${n === 1 ? 'result' : 'results'} for “${q}”.`,
+    battlesN: (n: number) => (n === 1 ? '1 battle' : `${n} battles`),
+    searchBig: 'Search a beatboxer by name or handle…',
     seeStats: 'See stats and battles',
   },
   profile: {
