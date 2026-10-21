@@ -9,6 +9,7 @@ import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
 import { STAGE_LISTEN_GRACE_MS, STAGE_PUBLISH } from '@/lib/live/stage';
 import { formatClock, formatTime } from '@/lib/format';
+import { useI18n } from '@/components/i18n/I18nProvider';
 import type { EventEntry, EventRow } from '@/lib/types';
 
 interface Props {
@@ -27,6 +28,9 @@ const ms = (iso: string | null) => (iso ? new Date(iso).getTime() : 0);
  * the mic live and records the showcase losslessly for the judges.
  */
 export default function EventStage({ event, entries, performedIds, currentUserId }: Props) {
+  const { t: all } = useI18n();
+  const tv = all.evp;
+  const ts = all.stage;
   const supabase = useMemo(() => createClient(), []);
   const clock = useServerClock();
   const now = clock.now;
@@ -78,7 +82,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId: event.id }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'The room couldn’t be opened.');
+      if (!res.ok) throw new Error(body.error ?? ts.roomFailed);
       const room = new Room({ adaptiveStream: false, dynacast: false });
       roomRef.current = room;
       const count = () => setAudience(room.numParticipants);
@@ -110,7 +114,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       count();
       if (isPerformer) {
         const source = rec.getStream()?.getAudioTracks()[0];
-        if (!source) throw new Error('The microphone didn’t start.');
+        if (!source) throw new Error(ts.micFailed);
         const mic = new LocalAudioTrack(source.clone(), undefined, true);
         await mic.mute();
         await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone, ...STAGE_PUBLISH });
@@ -118,7 +122,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       }
       setJoined(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The room couldn’t be opened.');
+      setError(err instanceof Error ? err.message : ts.roomFailed);
       void roomRef.current?.disconnect();
       roomRef.current = null;
     } finally {
@@ -149,20 +153,20 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       recordingKey.current = key;
       void micRef.current?.unmute();
       void rec.start();
-      setUpload('recording');
+      setUpload(ts.recording);
     } else if (recordingKey.current) {
       recordingKey.current = null;
       void micRef.current?.mute();
       (async () => {
         const take = await rec.stop();
-        if (!take || !currentUserId) { setUpload('failed: nothing was recorded'); return; }
+        if (!take || !currentUserId) { setUpload(ts.failed(tv.nothingRecorded)); return; }
         rec.reset();
-        setUpload('uploading');
+        setUpload(ts.uploading);
         try {
           await submitShowcase(supabase, event.id, currentUserId, take);
-          setUpload('saved');
+          setUpload(ts.saved);
         } catch (err) {
-          setUpload(`failed: ${err instanceof Error ? err.message : ''}`);
+          setUpload(ts.failed(err instanceof Error ? err.message : ''));
         }
       })();
     }
@@ -200,7 +204,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
     try {
       await eventRpc(supabase, fn, { p_event: event.id, ...args });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That didn’t work.');
+      setError(err instanceof Error ? err.message : tv.failed);
     } finally {
       setBusy(false);
     }
@@ -214,28 +218,28 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       <p className="flex flex-wrap items-center gap-2 text-lg">
         <span className={`inline-flex items-center gap-2 font-semibold ${event.live ? 'text-sub' : ''}`}>
           <span className={`size-2.5 rounded-full ${event.live ? 'animate-pulse bg-sub' : 'bg-muted'}`} aria-hidden="true" />
-          {event.live ? 'Eliminations live' : 'Eliminations paused'}
+          {event.live ? tv.elimsLive : tv.elimsPaused}
         </span>
-        {joined && <><span className="num">{audience}</span><span className="text-muted">in the room</span></>}
-        {joined && connection !== ConnectionState.Connected && <span className="text-loss">reconnecting…</span>}
+        {joined && <><span className="num">{audience}</span><span className="text-muted">{tv.inRoom}</span></>}
+        {joined && connection !== ConnectionState.Connected && <span className="text-loss">{ts.reconnecting}</span>}
       </p>
 
-      <section className="grid justify-items-start gap-3" aria-label="Stage">
+      <section className="grid justify-items-start gap-3" aria-label={ts.stage}>
         {counting && (
           <>
-            <p className="text-lg text-muted">{myTurn ? 'You’re on in' : `@${names[onStage!]} is on in`}</p>
+            <p className="text-lg text-muted">{myTurn ? ts.youreOnIn : ts.isOnIn(names[onStage!])}</p>
             <p className={`${big} text-sub`}>{Math.ceil((start - t) / 1000)}</p>
           </>
         )}
         {performing && (
           myTurn ? (
             <>
-              <p className="text-lg font-semibold text-sub">You’re on. Showcase time.</p>
+              <p className="text-lg font-semibold text-sub">{tv.showcaseTime}</p>
               <p className={big}>{formatClock(end - t)}</p>
             </>
           ) : (
             <>
-              <p className="text-lg text-muted">Now performing</p>
+              <p className="text-lg text-muted">{tv.nowPerforming}</p>
               <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">@{names[onStage!]}</h2>
               <p className="num text-muted">{formatTime((t - start) / 1000)} / {formatTime((end - start) / 1000)}</p>
             </>
@@ -243,9 +247,9 @@ export default function EventStage({ event, entries, performedIds, currentUserId
         )}
         {!counting && !performing && (
           <>
-            <p className="text-lg text-muted">{event.live ? (nextUp ? 'Next up' : 'Everyone has performed') : 'Paused'}</p>
+            <p className="text-lg text-muted">{event.live ? (nextUp ? ts.nextUp : tv.everyoneDone) : tv.paused}</p>
             <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">
-              {event.live ? (nextUp ? `@${names[nextUp.profile_id]}` : 'Judges are next') : 'See you next session'}
+              {event.live ? (nextUp ? `@${names[nextUp.profile_id]}` : tv.judgesNext) : tv.seeYou}
             </h2>
           </>
         )}
@@ -257,57 +261,57 @@ export default function EventStage({ event, entries, performedIds, currentUserId
         {!joined && (
           <div className="grid justify-items-start gap-2">
             <button onClick={enter} disabled={connecting} className="rounded-full bg-ink px-7 py-3.5 text-lg text-paper disabled:opacity-60">
-              {connecting ? 'Opening the room…' : isPerformer ? 'Enter the stage' : 'Enter to listen'}
+              {connecting ? ts.opening : isPerformer ? ts.enterStage : ts.enterListen}
             </button>
             <p className="text-sm text-muted">
-              {isPerformer ? <>Use headphones. Your mic only opens when the host calls you. <a href="/mic-check" target="_blank" className="underline underline-offset-4">Run a mic check</a> first.</> : 'Sound starts after you enter.'}
+              {isPerformer ? <>{tv.performerHint} <a href="/mic-check" target="_blank" className="underline underline-offset-4">{ts.runMicCheck}</a> {ts.first}</> : tv.listenerHint}
             </p>
           </div>
         )}
-        {upload && <p className={`text-sm ${upload.startsWith('failed') ? 'text-loss' : upload === 'saved' ? 'text-win' : ''}`}>Your showcase: {upload}</p>}
+        {upload && <p className={`text-sm ${upload.startsWith(ts.failed('').trim()) ? 'text-loss' : upload === ts.saved ? 'text-win' : ''}`}>{tv.yourShowcase(upload)}</p>}
         {error && <p role="alert" className="text-loss">{error}</p>}
       </section>
 
       {isHost && (
-        <section className="grid gap-4 rounded-2xl border-2 border-ink p-5" aria-label="Host controls">
-          <h2 className="text-xl font-bold [font-stretch:112%]">Host controls</h2>
+        <section className="grid gap-4 rounded-2xl border-2 border-ink p-5" aria-label={ts.hostControls}>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{ts.hostControls}</h2>
           {event.live ? (
             <div className="flex flex-wrap gap-2">
               {!counting && !performing && nextUp && (
                 <button disabled={busy} onClick={() => act('host_call_showcase')} className={`${btn} bg-ink text-paper`}>
-                  Call @{names[nextUp.profile_id]} to the stage
+                  {tv.call(names[nextUp.profile_id])}
                 </button>
               )}
-              {performing && <button disabled={busy} onClick={() => act('host_stop_showcase')} className={`${btn} border border-line`}>Stop showcase now</button>}
+              {performing && <button disabled={busy} onClick={() => act('host_stop_showcase')} className={`${btn} border border-line`}>{tv.stopShowcase}</button>}
               {!counting && !performing && !nextUp && (
                 <button disabled={busy} onClick={() => act('host_finish_eliminations')} className={`${btn} bg-sub text-paper`}>
-                  Finish eliminations and send to judges
+                  {tv.finishElims}
                 </button>
               )}
             </div>
           ) : (
-            <button disabled={busy} onClick={() => act('host_resume_event')} className={`${btn} justify-self-start bg-ink text-paper`}>Resume the eliminations</button>
+            <button disabled={busy} onClick={() => act('host_resume_event')} className={`${btn} justify-self-start bg-ink text-paper`}>{tv.resumeElims}</button>
           )}
 
           {event.live && !counting && !performing && (
             <div className="flex flex-wrap items-end gap-2 border-t border-line pt-4">
               <label className="grid gap-1 text-sm">
-                <span className="text-muted">Next session (optional)</span>
+                <span className="text-muted">{tv.nextSessionOpt}</span>
                 <input type="datetime-local" value={nextSession} onChange={(e) => setNextSession(e.target.value)}
                   className="rounded-lg border border-line bg-surface px-3 py-2" />
               </label>
               <button disabled={busy} className={`${btn} border border-line`}
                 onClick={() => act('host_pause_event', { p_next_session: nextSession ? new Date(nextSession).toISOString() : null })}>
-                Pause for today
+                {tv.pauseToday}
               </button>
             </div>
           )}
-          <p className="text-sm text-muted">Showcases start 3 seconds after you call, so every screen counts down together. Pausing keeps everything; resume any day.</p>
+          <p className="text-sm text-muted">{tv.stageHint}</p>
         </section>
       )}
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-bold [font-stretch:112%]">Running order</h2>
+        <h2 className="text-xl font-bold [font-stretch:112%]">{ts.runningOrder}</h2>
         <ol className="grid">
           {order.map((e, i) => {
             const done = performedIds.includes(e.profile_id);
@@ -317,9 +321,9 @@ export default function EventStage({ event, entries, performedIds, currentUserId
                 <span className="num text-muted">{i + 1}</span>
                 <span>@{e.profile?.username}</span>
                 <span className="flex items-center gap-3 text-sm text-muted">
-                  {live ? 'On now' : done ? 'Done' : ''}
+                  {live ? ts.onNow : done ? ts.done : ''}
                   {isHost && event.live && (done || e.profile_id === onStage) && !counting && !performing && (
-                    <button disabled={busy} onClick={() => act('host_call_showcase', { p_profile: e.profile_id })} className="underline underline-offset-4">Redo</button>
+                    <button disabled={busy} onClick={() => act('host_call_showcase', { p_profile: e.profile_id })} className="underline underline-offset-4">{tv.redo}</button>
                   )}
                 </span>
               </li>

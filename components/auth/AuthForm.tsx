@@ -20,7 +20,8 @@ function friendly(message: string, t: Dict['auth']): string {
 }
 
 export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup'; next?: string }) {
-  const t = useI18n().t.auth;
+  const { locale, t: allT } = useI18n();
+  const t = allT.auth;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState('');
@@ -33,8 +34,8 @@ export default function AuthForm({ mode, next = '/' }: { mode: 'login' | 'signup
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const countries = useMemo(
-    () => COUNTRY_CODES.map((c) => ({ c, name: countryName(c) })).sort((a, b) => a.name.localeCompare(b.name)),
-    [],
+    () => COUNTRY_CODES.map((c) => ({ c, name: countryName(c, locale) })).sort((a, b) => a.name.localeCompare(b.name, locale)),
+    [locale],
   );
 
   async function onSubmit(e: React.FormEvent) {

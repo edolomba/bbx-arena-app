@@ -1,3 +1,7 @@
+'use client';
+
+import { useI18n } from '@/components/i18n/I18nProvider';
+
 import Link from 'next/link';
 import type { StandingRow } from '@/lib/types';
 
@@ -8,24 +12,25 @@ import type { StandingRow } from '@/lib/types';
 export default function StandingsTable({ rows, names, advanceCount }: {
   rows: StandingRow[]; names: Record<string, string>; advanceCount: number;
 }) {
+  const t = useI18n().t.ev;
   // Note which rule separated a row from the one above it, when the score was equal.
   const decidedBy = (r: StandingRow, prev?: StandingRow) => {
     if (!prev || prev.trimmed !== r.trimmed) return '';
-    if (prev.h2h !== r.h2h) return 'head-to-head';
-    if (prev.full_sum !== r.full_sum) return 'all positions';
-    if (prev.firsts !== r.firsts) return 'first places';
-    return r.tied ? 'still tied' : 'host’s decision';
+    if (prev.h2h !== r.h2h) return t.byH2h;
+    if (prev.full_sum !== r.full_sum) return t.byAll;
+    if (prev.firsts !== r.firsts) return t.byFirsts;
+    return r.tied ? t.stillTied : t.byHost;
   };
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[34rem] border-collapse">
         <thead>
           <tr className="border-b-2 border-ink text-left text-xs text-muted">
-            <th scope="col" className="py-2 pr-3 text-right font-semibold">Place</th>
-            <th scope="col" className="py-2 pr-3 font-semibold">Beatboxer</th>
-            <th scope="col" className="py-2 pr-3 font-semibold">Judges’ positions</th>
-            <th scope="col" className="py-2 pr-3 text-right font-semibold">Score</th>
-            <th scope="col" className="py-2 font-semibold">Note</th>
+            <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.place}</th>
+            <th scope="col" className="py-2 pr-3 font-semibold">{t.beatboxer}</th>
+            <th scope="col" className="py-2 pr-3 font-semibold">{t.judgesPositions}</th>
+            <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.score}</th>
+            <th scope="col" className="py-2 font-semibold">{t.note}</th>
           </tr>
         </thead>
         <tbody>
@@ -37,7 +42,7 @@ export default function StandingsTable({ rows, names, advanceCount }: {
                 <td className={`num py-2.5 pr-3 text-right text-xl ${qualified ? '' : 'text-muted'}`}>{r.place}</td>
                 <td className="py-2.5 pr-3">
                   <Link href={`/beatboxers/${names[r.profile_id]}`} className="underline-offset-4 hover:underline">@{names[r.profile_id]}</Link>
-                  {qualified && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-xs text-paper">Qualified</span>}
+                  {qualified && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-xs text-paper">{t.qualified}</span>}
                 </td>
                 <td className="num py-2.5 pr-3 whitespace-nowrap">
                   {r.positions.map((p, k) => {
@@ -55,8 +60,7 @@ export default function StandingsTable({ rows, names, advanceCount }: {
         </tbody>
       </table>
       <p className="mt-2 text-sm text-muted">
-        For each beatboxer the best and the worst position are dropped and the rest are added up; lowest wins.
-        Ties go to head-to-head, then all positions, then first places, then the host.
+        {t.rule}
       </p>
     </div>
   );

@@ -1,4 +1,7 @@
-import { BADGES, RARITY_LABEL } from '@/lib/badges';
+'use client';
+
+import { BADGES } from '@/lib/badges';
+import { useI18n } from '@/components/i18n/I18nProvider';
 
 const STYLE: Record<number, string> = {
   1: 'border border-line text-muted',
@@ -18,10 +21,11 @@ function Icon({ category }: { category: string }) {
 
 /** A badge. `compact` is the small mark shown next to a handle. */
 export default function BadgeChip({ code, compact = false }: { code: string | null | undefined; compact?: boolean }) {
+  const t = useI18n().t.badges;
   if (!code || !BADGES[code]) return null;
   const b = BADGES[code];
   return (
-    <span title={`${b.name}: ${b.description} (${RARITY_LABEL[b.rarity]})`}
+    <span title={`${b.name}: ${t.desc[code] ?? b.description} (${t.rarity[b.rarity]})`}
       className={`inline-flex items-center gap-1 rounded-full align-middle font-sans font-semibold whitespace-nowrap [font-stretch:100%] ${STYLE[b.rarity]} ${
         compact ? 'px-1.5 py-px text-[0.65rem] leading-4 tracking-normal' : 'px-2.5 py-1 text-xs'}`}>
       <Icon category={b.category} />

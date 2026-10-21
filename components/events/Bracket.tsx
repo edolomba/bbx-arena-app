@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/I18nProvider';
+
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -31,10 +33,12 @@ interface Props {
   currentBattleId: string | null;
 }
 
-const roundName = (r: number, total: number) =>
-  r === total ? 'Final' : r === total - 1 ? 'Semifinals' : r === total - 2 ? 'Quarterfinals' : `Round of ${2 ** (total - r + 1)}`;
+type EvDict = ReturnType<typeof useI18n>['t']['ev'];
+const roundName = (t: EvDict, r: number, total: number) =>
+  r === total ? t.final : r === total - 1 ? t.semis : r === total - 2 ? t.quarters : t.roundOf(2 ** (total - r + 1));
 
 export default function Bracket({ eventId, isHost, live, mainFormat, matches, swiss, names, currentBattleId }: Props) {
+  const t = useI18n().t.ev;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [busy, setBusy] = useState(false);
@@ -48,7 +52,7 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
       await eventRpc(supabase, fn, { p_event: eventId, ...args });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That didn’t work.');
+      setError(err instanceof Error ? err.message : t.failed);
     } finally {
       setBusy(false);
     }
@@ -65,8 +69,8 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
     const ready = !!m.a_id && !!m.b_id;
     const side = (id: string | null) => (
       <span className={`flex items-center justify-between gap-2 px-3 py-1.5 ${decided && m.winner_id === id ? 'font-bold' : decided ? 'text-muted line-through decoration-1' : ''}`}>
-        <span className="truncate">{id ? `@${names[id] ?? '?'}` : 'to be decided'}</span>
-        {decided && m.winner_id === id && <span className="text-xs text-win">{m.walkover ? 'W.O.' : 'won'}</span>}
+        <span className="truncate">{id ? `@${names[id] ?? '?'}` : t.tbd}</span>
+        {decided && m.winner_id === id && <span className="text-xs text-win">{m.walkover ? t.wo : t.won}</span>}
       </span>
     );
     return (
@@ -77,22 +81,22 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
         {side(m.b_id)}
         {(onStage(m) || (decided && m.battle_id) || (isHost && ready && !decided)) && (
         <span className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-1.5 text-xs">
-          {onStage(m) && <span className="font-semibold text-sub">On stage now</span>}
-          {decided && m.battle_id && <Link href={`/battles/${m.battle_id}`} className="text-muted underline underline-offset-4">Replay</Link>}
+          {onStage(m) && <span className="font-semibold text-sub">{t.onStageNow}</span>}
+          {decided && m.battle_id && <Link href={`/battles/${m.battle_id}`} className="text-muted underline underline-offset-4">{t.replay}</Link>}
           {isHost && live && ready && !decided && !onStage(m) && (
-            <button disabled={busy} onClick={() => act('host_open_match', { p_match: m.id })} className="rounded-full bg-ink px-3 py-1 text-paper disabled:opacity-50">Put on stage</button>
+            <button disabled={busy} onClick={() => act('host_open_match', { p_match: m.id })} className="rounded-full bg-ink px-3 py-1 text-paper disabled:opacity-50">{t.putOnStage}</button>
           )}
           {isHost && ready && !decided && (
             woFor === m.id ? (
               <span className="flex flex-wrap gap-1">
-                Walkover to
+                {t.walkoverTo}
                 {[m.a_id!, m.b_id!].map((id) => (
                   <button key={id} disabled={busy} onClick={() => act('host_award_match', { p_match: m.id, p_winner: id })} className="underline underline-offset-4">@{names[id]}</button>
                 ))}
-                <button onClick={() => setWoFor(null)} className="text-muted">cancel</button>
+                <button onClick={() => setWoFor(null)} className="text-muted">{t.cancel}</button>
               </span>
             ) : (
-              <button onClick={() => setWoFor(m.id)} className="text-muted underline underline-offset-4">No-show?</button>
+              <button onClick={() => setWoFor(m.id)} className="text-muted underline underline-offset-4">{t.noShowQ}</button>
             )
           )}
         </span>
@@ -102,17 +106,17 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
   };
 
   return (
-    <section className="grid gap-6" aria-label="Main stage">
+    <section className="grid gap-6" aria-label={t.mainStage}>
       {error && <p role="alert" className="text-loss">{error}</p>}
 
       {mainFormat === 'swiss' && swissRounds.length > 0 && (
         <div className="grid gap-5">
-          <h3 className="text-xl font-bold [font-stretch:112%]">Swiss rounds</h3>
+          <h3 className="text-xl font-bold [font-stretch:112%]">{t.swissRounds}</h3>
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
             <div className="grid gap-4">
               {swissRounds.map((r) => (
                 <div key={r} className="grid gap-2">
-                  <p className="text-sm text-muted">Round {r}</p>
+                  <p className="text-sm text-muted">{t.roundN(r)}</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {matches.filter((m) => m.phase === 'swiss' && m.round === r).sort((a, b) => a.slot - b.slot).map((m) => <Box key={m.id} m={m} />)}
                   </div>
@@ -120,18 +124,18 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
               ))}
             </div>
             <div className="grid content-start gap-2">
-              <p className="text-sm text-muted">Standings (wins, then opponents’ wins)</p>
+              <p className="text-sm text-muted">{t.swissStandings}</p>
               <ol className="grid border-t-2 border-ink text-sm">
                 {swiss.map((s) => (
                   <li key={s.profile_id} className={`grid grid-cols-[1.5rem_1fr_auto_auto] gap-3 border-b py-1.5 ${s.pos === 4 ? 'border-b-2 border-sub' : 'border-line'}`}>
                     <span className="num text-muted">{s.pos}</span>
                     <span className="truncate">@{names[s.profile_id]}</span>
-                    <span className="num">{s.wins} W</span>
+                    <span className="num">{t.wins(s.wins)}</span>
                     <span className="num text-muted">{s.buchholz}</span>
                   </li>
                 ))}
               </ol>
-              <p className="text-xs text-muted">The top 4 play the semifinals.</p>
+              <p className="text-xs text-muted">{t.top4Note}</p>
             </div>
           </div>
         </div>
@@ -139,7 +143,7 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
 
       {ko.length > 0 && (
         <div className="grid gap-3">
-          <h3 className="text-xl font-bold [font-stretch:112%]">{mainFormat === 'swiss' ? 'Top 4' : 'Knockout'}</h3>
+          <h3 className="text-xl font-bold [font-stretch:112%]">{mainFormat === 'swiss' ? t.top4 : t.knockout}</h3>
           <div className="overflow-x-auto pb-2">
             <div className="grid min-w-max auto-cols-[minmax(13rem,1fr)] grid-flow-col gap-4">
               {Array.from({ length: koRounds }, (_, i) => i + 1).map((r) => {
@@ -147,15 +151,15 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
                 const expected = ko.filter((m) => m.round === 1).length / 2 ** (r - 1);
                 return (
                   <div key={r} className="grid grid-rows-[auto_1fr] gap-3">
-                    <p className="text-sm text-muted">{roundName(r, koRounds)}</p>
+                    <p className="text-sm text-muted">{roundName(t, r, koRounds)}</p>
                     <div className="grid content-around gap-3">
                       {inRound.map((m) => <Box key={m.id} m={m} />)}
                       {Array.from({ length: Math.max(0, expected - inRound.length) }, (_, k) => (
                         <div key={`tbd-${k}`} className="grid min-h-20 place-items-center rounded-xl border border-dashed border-line px-3 text-center text-sm text-muted">
-                          Winners of the {roundName(r - 1, koRounds).toLowerCase()}
+                          {t.winnersOf(roundName(t, r - 1, koRounds))}
                         </div>
                       ))}
-                      {r === koRounds && small && <Box m={small} label="Small final, 3rd place" />}
+                      {r === koRounds && small && <Box m={small} label={t.smallFinal} />}
                     </div>
                   </div>
                 );

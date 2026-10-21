@@ -2,19 +2,22 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import BeatboxerCard from '@/components/directory/BeatboxerCard';
 import { countryName } from '@/lib/format';
+import { getT } from '@/lib/i18n/server';
 import type { DirectoryEntry, ProfileBattle } from '@/lib/types';
 
 const PAGE_SIZE = 24;
 const SORTS = {
-  rating: { column: 'elo_rating', label: 'Highest rated' },
-  battles: { column: 'battles_count', label: 'Most battles' },
-  winrate: { column: 'win_rate', label: 'Best win rate' },
-  newest: { column: 'created_at', label: 'Newest' },
+  rating: { column: 'elo_rating', label: 'rating' },
+  battles: { column: 'battles_count', label: 'battles' },
+  winrate: { column: 'win_rate', label: 'winrate' },
+  newest: { column: 'created_at', label: 'newest' },
 } as const;
 
 type SearchParams = Promise<Record<string, string | undefined>>;
 
 export default async function BeatboxersPage({ searchParams }: { searchParams: SearchParams }) {
+  const { locale, t: all } = await getT();
+  const t = all.dir;
   const params = await searchParams;
   const q = (params.q ?? '').replace(/[^\p{L}\p{N}_. ]/gu, '').trim().slice(0, 40);
   const country = /^[A-Z]{2}$/.test(params.country ?? '') ? params.country! : '';
@@ -52,46 +55,46 @@ export default async function BeatboxersPage({ searchParams }: { searchParams: S
     return `/beatboxers${sp.size ? `?${sp}` : ''}`;
   };
   const sortedCountries = (countries ?? [])
-    .map((c) => ({ ...c, name: countryName(c.country) }))
+    .map((c) => ({ ...c, name: countryName(c.country, locale) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const field = 'rounded-lg border border-line bg-surface px-3 py-2';
 
   return (
     <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6">
       <header className="grid gap-2">
-        <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">Beatboxers</h1>
+        <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">{t.title}</h1>
         <p className="text-muted">
-          {total.toLocaleString('en')} {total === 1 ? 'artist' : 'artists'}{q || country ? ' match your filters' : ' on the board'}
+          {t.count(total.toLocaleString(), total === 1, !!(q || country))}
         </p>
       </header>
 
       <form className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]" role="search">
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Name or handle</span>
-          <input name="q" defaultValue={q} placeholder="Search" className={field} />
+          <span className="text-muted">{t.search}</span>
+          <input name="q" defaultValue={q} placeholder={t.searchPh} className={field} />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Country</span>
+          <span className="text-muted">{t.country}</span>
           <select name="country" defaultValue={country} className={field}>
-            <option value="">Anywhere</option>
+            <option value="">{t.anywhere}</option>
             {sortedCountries.map((c) => <option key={c.country} value={c.country}>{c.name} ({c.beatboxers})</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-muted">Sort by</span>
+          <span className="text-muted">{t.sortBy}</span>
           <select name="sort" defaultValue={sort} className={field}>
-            {Object.entries(SORTS).map(([value, s]) => <option key={value} value={value}>{s.label}</option>)}
+            {Object.entries(SORTS).map(([value, s]) => <option key={value} value={value}>{t[s.label as 'rating' | 'battles' | 'winrate' | 'newest']}</option>)}
           </select>
         </label>
-        <button type="submit" className="self-end rounded-full bg-ink px-5 py-2.5 text-paper">Apply filters</button>
+        <button type="submit" className="self-end rounded-full bg-ink px-5 py-2.5 text-paper">{t.apply}</button>
       </form>
 
       {error ? (
-        <p role="alert" className="text-loss">The directory didn’t load: {error.message}. Refresh to try again.</p>
+        <p role="alert" className="text-loss">{t.loadFailed(error.message)}</p>
       ) : entries.length === 0 ? (
         <div className="grid justify-items-start gap-2 rounded-2xl border border-dashed border-line p-8">
-          <p className="text-lg">No beatboxers match these filters.</p>
-          <Link href="/beatboxers" className="underline underline-offset-4">Clear filters</Link>
+          <p className="text-lg">{t.none}</p>
+          <Link href="/beatboxers" className="underline underline-offset-4">{t.clear}</Link>
         </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -100,10 +103,10 @@ export default async function BeatboxersPage({ searchParams }: { searchParams: S
       )}
 
       {lastPage > 1 && (
-        <nav aria-label="Pages" className="flex items-center justify-between">
-          {page > 1 ? <Link href={hrefFor(page - 1)} className="underline underline-offset-4">Previous page</Link> : <span />}
-          <span className="num text-muted">Page {page} of {lastPage}</span>
-          {page < lastPage ? <Link href={hrefFor(page + 1)} className="underline underline-offset-4">Next page</Link> : <span />}
+        <nav aria-label={t.pages} className="flex items-center justify-between">
+          {page > 1 ? <Link href={hrefFor(page - 1)} className="underline underline-offset-4">{t.prev}</Link> : <span />}
+          <span className="num text-muted">{t.pageOf(page, lastPage)}</span>
+          {page < lastPage ? <Link href={hrefFor(page + 1)} className="underline underline-offset-4">{t.next}</Link> : <span />}
         </nav>
       )}
     </main>

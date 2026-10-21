@@ -1,5 +1,8 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/I18nProvider';
+import { LOCALE_TAG } from '@/lib/i18n/config';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -22,6 +25,8 @@ interface Props {
  * Draft scores stay on this device only.
  */
 export default function JudgeRanking({ eventId, performers, showcases, savedOrder, submittedAt }: Props) {
+  const { locale, t: all } = useI18n();
+  const t = all.ev;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const storageKey = `bbx-judge-draft-${eventId}`;
@@ -61,28 +66,27 @@ export default function JudgeRanking({ eventId, performers, showcases, savedOrde
     setMessage(null);
     try {
       await eventRpc(supabase, 'judge_save_ranking', { p_event: eventId, p_order: order });
-      setMessage('Your ranking is saved. You can still change it until the host publishes.');
+      setMessage(t.rankingSaved);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Your ranking wasn’t saved.');
+      setError(err instanceof Error ? err.message : t.rankingFailed);
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <section className="grid gap-5" aria-label="Your ranking">
+    <section className="grid gap-5" aria-label={t.yourRanking}>
       <div className="grid gap-1">
-        <h2 className="text-2xl font-bold [font-stretch:112%]">Your ranking</h2>
+        <h2 className="text-2xl font-bold [font-stretch:112%]">{t.yourRanking}</h2>
         <p className="max-w-[62ch] text-muted">
-          Replay the showcases as often as you like. Give each a quick draft score, sort by your scores, then fine-tune the
-          order with the arrows. Position 1 is your best. Nobody sees your ranking until the host publishes.
+          {t.rankingIntro}
         </p>
-        {submittedAt && <p className="text-sm text-win">Saved {new Date(submittedAt).toLocaleString('en-GB')}</p>}
+        {submittedAt && <p className="text-sm text-win">{t.saved(new Date(submittedAt).toLocaleString(LOCALE_TAG[locale]))}</p>}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={sortByScores} className="rounded-full border border-line px-4 py-2 text-sm">Sort by my draft scores</button>
+        <button onClick={sortByScores} className="rounded-full border border-line px-4 py-2 text-sm">{t.sortDraft}</button>
       </div>
 
       <ol className="grid gap-3">
@@ -94,7 +98,7 @@ export default function JudgeRanking({ eventId, performers, showcases, savedOrde
                 <span className="num w-10 text-3xl leading-none">{i + 1}</span>
                 <span className="handle min-w-0 flex-1 truncate text-lg">@{name(id)}</span>
                 <label className="flex items-center gap-2 text-sm">
-                  <span className="text-muted">Draft</span>
+                  <span className="text-muted">{t.draft}</span>
                   <select value={scores[id] ?? ''} onChange={(e) => setScore(id, Number(e.target.value))}
                     className="rounded-lg border border-line bg-paper px-2 py-1">
                     <option value="">–</option>
@@ -102,16 +106,16 @@ export default function JudgeRanking({ eventId, performers, showcases, savedOrde
                   </select>
                 </label>
                 <span className="flex gap-1">
-                  <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move @${name(id)} up`}
+                  <button onClick={() => move(i, -1)} disabled={i === 0} aria-label={t.moveUp(name(id))}
                     className="grid size-9 place-items-center rounded-full border border-line disabled:opacity-30">↑</button>
-                  <button onClick={() => move(i, 1)} disabled={i === order.length - 1} aria-label={`Move @${name(id)} down`}
+                  <button onClick={() => move(i, 1)} disabled={i === order.length - 1} aria-label={t.moveDown(name(id))}
                     className="grid size-9 place-items-center rounded-full border border-line disabled:opacity-30">↓</button>
                 </span>
               </div>
               {sc ? (
-                <WaveformPlayer compact src={audioUrl(sc.audio_path)} waveform={sc.waveform_data} durationMs={sc.duration_ms} label={`@${name(id)} showcase`} />
+                <WaveformPlayer compact src={audioUrl(sc.audio_path)} waveform={sc.waveform_data} durationMs={sc.duration_ms} label={t.showcaseOf(name(id))} />
               ) : (
-                <p className="text-sm text-muted">No recording available.</p>
+                <p className="text-sm text-muted">{t.noRecording}</p>
               )}
             </li>
           );
@@ -121,7 +125,7 @@ export default function JudgeRanking({ eventId, performers, showcases, savedOrde
       {error && <p role="alert" className="text-loss">{error}</p>}
       {message && <p role="status" className="text-win">{message}</p>}
       <button onClick={save} disabled={busy} className="justify-self-start rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-        {busy ? 'Saving…' : submittedAt ? 'Update my ranking' : 'Submit my ranking'}
+        {busy ? t.saving : submittedAt ? t.updateRanking : t.submitRanking}
       </button>
     </section>
   );

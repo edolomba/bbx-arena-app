@@ -1,16 +1,18 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { flagEmoji, formatDate, formatRemaining } from '@/lib/format';
+import { flagEmoji, formatDate } from '@/lib/format';
 import type { LeaderboardRow, ScoringRules, Season } from '@/lib/types';
 import BadgeChip from '@/components/badges/BadgeChip';
+import { getT } from '@/lib/i18n/server';
+import { LOCALE_TAG } from '@/lib/i18n/config';
 
 export const metadata = { title: 'Ranking' };
 export const dynamic = 'force-dynamic';
 
 const TABS = {
-  week: { label: 'This week', period: 'weekly' },
-  season: { label: 'Season', period: 'season' },
-  all: { label: 'All time', period: 'all' },
+  week: { label: 'week', period: 'weekly' },
+  season: { label: 'season', period: 'season' },
+  all: { label: 'all', period: 'all' },
 } as const;
 type Tab = keyof typeof TABS;
 
@@ -24,9 +26,9 @@ function nextWeeklyReset(now = new Date()): Date {
   return d;
 }
 
-const pts = (n: number) => `${n > 0 ? '' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('en')}`;
+const pts = (n: number) => `${n > 0 ? '' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('en').replace(/,/g, '\u202f')}`;
 
-function Row({ r, me, badge }: { r: LeaderboardRow; me: boolean; badge?: string | null }) {
+function Row({ r, me, badge, youLabel }: { r: LeaderboardRow; me: boolean; badge?: string | null; youLabel: string }) {
   return (
     <tr
       id={me ? 'me' : undefined}
@@ -39,7 +41,7 @@ function Row({ r, me, badge }: { r: LeaderboardRow; me: boolean; badge?: string 
           <span aria-hidden="true">{flagEmoji(r.country)} </span>@{r.username}
         </Link>
         {badge && <span className="ml-2"><BadgeChip code={badge} compact /></span>}
-        {me && <span className="ml-2 rounded-full bg-sub px-2 py-0.5 text-xs font-bold text-paper">You</span>}
+        {me && <span className="ml-2 rounded-full bg-sub px-2 py-0.5 text-xs font-bold text-paper">{youLabel}</span>}
       </td>
       <td className="num py-3 pr-3 text-right text-xl">{pts(r.points)}</td>
       <td className="num py-3 pr-3 text-right">{r.battles}</td>
@@ -49,6 +51,10 @@ function Row({ r, me, badge }: { r: LeaderboardRow; me: boolean; badge?: string 
 }
 
 export default async function RankingPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { locale, t: all } = await getT();
+  const t = all.rank;
+  const tag = LOCALE_TAG[locale];
+  const remaining = (ms: number) => { const mins = Math.max(0, Math.floor(ms / 60000)); return t.remaining(Math.floor(mins / 1440), Math.floor((mins % 1440) / 60), mins % 60); };
   const { tab: rawTab } = await searchParams;
   const tab: Tab = rawTab && rawTab in TABS ? (rawTab as Tab) : 'week';
   const period = TABS[tab].period;
@@ -75,23 +81,23 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const badgeOf = new Map((badgeRows ?? []).map((b) => [b.id as string, b.featured_badge as string | null]));
 
   let periodNote: string;
-  if (tab === 'week') periodNote = `Since Monday 00:00 UTC. Resets in ${formatRemaining(nextWeeklyReset().getTime() - Date.now())}.`;
+  if (tab === 'week') periodNote = t.weekNote(remaining(nextWeeklyReset().getTime() - Date.now()));
   else if (tab === 'season')
     periodNote = season
-      ? `${season.name}, ${formatDate(season.starts_at)} to ${formatDate(season.ends_at)}. Ends in ${formatRemaining(new Date(season.ends_at).getTime() - Date.now())}.`
-      : 'No season is running right now.';
-  else periodNote = 'Every finished battle since launch.';
+      ? t.seasonNote(season.name, formatDate(season.starts_at, tag), formatDate(season.ends_at, tag), remaining(new Date(season.ends_at).getTime() - Date.now()))
+      : t.noSeason;
+  else periodNote = t.allNote;
 
   const emptyText =
-    tab === 'season' && !season ? 'The next season hasn’t started yet.'
-    : tab === 'week' ? 'Nobody has finished a battle this week yet. The first win takes the top spot.'
-    : 'No finished battles yet.';
+    tab === 'season' && !season ? t.emptySeason
+    : tab === 'week' ? t.emptyWeek
+    : t.emptyAll;
 
   return (
     <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6">
       <header className="grid gap-2">
-        <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">Ranking</h1>
-        <p className="text-muted">Points for battles, never for votes.</p>
+        <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">{t.title}</h1>
+        <p className="text-muted">{t.lead}</p>
       </header>
 
       <nav aria-label="Ranking period" className="flex flex-wrap gap-1">
@@ -102,7 +108,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             aria-current={key === tab ? 'page' : undefined}
             className={`rounded-full px-4 py-1.5 text-sm ${key === tab ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}
           >
-            {TABS[key].label}
+            {t[TABS[key].label]}
           </Link>
         ))}
       </nav>
@@ -110,31 +116,31 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="text-sm text-muted">{periodNote}</p>
         {mine && meInList && mine.rank > 8 && (
-          <a href="#me" className="text-sm underline underline-offset-4">Jump to my position (#{mine.rank})</a>
+          <a href="#me" className="text-sm underline underline-offset-4">{t.jump(mine.rank)}</a>
         )}
       </div>
 
       {/* The signed-in player's standing, always visible above the table */}
       {user && (
         mine ? (
-          <section aria-label="Your position" className="flex flex-wrap items-baseline gap-x-8 gap-y-2 border-y-2 border-sub py-4">
-            <p className="text-muted">Your position</p>
+          <section aria-label={t.yourPosition} className="flex flex-wrap items-baseline gap-x-8 gap-y-2 border-y-2 border-sub py-4">
+            <p className="text-muted">{t.yourPosition}</p>
             <p className="num text-4xl leading-none">#{mine.rank}</p>
-            <p><span className="num text-2xl">{pts(mine.points)}</span> <span className="text-muted">points</span></p>
-            <p className="text-muted"><span className="num text-ink">{mine.battles}</span> battles, <span className="num text-ink">{mine.wins}</span> wins</p>
+            <p><span className="num text-2xl">{pts(mine.points)}</span> <span className="text-muted">{t.points}</span></p>
+            <p className="text-muted">{t.battlesWins(mine.battles, mine.wins)}</p>
           </section>
         ) : (
-          <section aria-label="Your position" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line p-4">
+          <section aria-label={t.yourPosition} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-line p-4">
             <p className="text-muted">
-              {tab === 'week' ? 'You haven’t finished a battle this week.' : tab === 'season' ? 'You haven’t finished a battle this season.' : 'You haven’t finished a battle yet.'}
+              {tab === 'week' ? t.noneWeek : tab === 'season' ? t.noneSeason : t.noneYet}
             </p>
-            <Link href="/battles/new" className="rounded-full bg-ink px-5 py-2 text-paper">Start a battle</Link>
+            <Link href="/battles/new" className="rounded-full bg-ink px-5 py-2 text-paper">{all.nav.startBattle}</Link>
           </section>
         )
       )}
       {!user && (
         <p className="text-muted">
-          <Link href="/login?next=/ranking" className="text-ink underline underline-offset-4">Log in</Link> to see your position.
+          <Link href="/login?next=/ranking" className="text-ink underline underline-offset-4">{t.logIn}</Link> {t.toSee}
         </p>
       )}
 
@@ -145,19 +151,19 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
           <table className="w-full min-w-[30rem] border-collapse">
             <thead>
               <tr className="border-b-2 border-ink text-left text-xs text-muted">
-                <th scope="col" className="w-16 py-2 pr-3 pl-3 text-right font-semibold">Rank</th>
-                <th scope="col" className="py-2 pr-3 font-semibold">Beatboxer</th>
-                <th scope="col" className="py-2 pr-3 text-right font-semibold">Points</th>
-                <th scope="col" className="py-2 pr-3 text-right font-semibold">Battles</th>
-                <th scope="col" className="py-2 pr-3 text-right font-semibold">Wins</th>
+                <th scope="col" className="w-16 py-2 pr-3 pl-3 text-right font-semibold">{t.colRank}</th>
+                <th scope="col" className="py-2 pr-3 font-semibold">{t.colBeatboxer}</th>
+                <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.colPoints}</th>
+                <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.colBattles}</th>
+                <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.colWins}</th>
               </tr>
             </thead>
             <tbody>
-              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} badge={badgeOf.get(r.profile_id)} />)}
+              {board.map((r) => <Row key={r.profile_id} r={r} me={r.profile_id === user?.id} badge={badgeOf.get(r.profile_id)} youLabel={t.you} />)}
               {mine && !meInList && (
                 <>
                   <tr aria-hidden="true"><td colSpan={5} className="py-1 text-center text-muted">⋯</td></tr>
-                  <Row r={mine} me badge={badgeOf.get(mine.profile_id)} />
+                  <Row r={mine} me badge={badgeOf.get(mine.profile_id)} youLabel={t.you} />
                 </>
               )}
             </tbody>
@@ -167,14 +173,14 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
 
       {rules && (
         <section className="grid gap-3">
-          <h2 className="text-xl font-bold [font-stretch:112%]">How points work</h2>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{t.how}</h2>
           <dl className="grid grid-cols-2 border-t-2 border-ink sm:grid-cols-5">
             {[
-              ['Win', rules.win],
-              ['Loss (round delivered)', rules.loss],
-              ['Draw', rules.draw],
-              ['Win by forfeit', rules.forfeit_win],
-              ['Forfeit (missed deadline)', rules.forfeit],
+              [t.win, rules.win],
+              [t.loss, rules.loss],
+              [t.draw, rules.draw],
+              [t.forfeitWin, rules.forfeit_win],
+              [t.forfeit, rules.forfeit],
             ].map(([label, value]) => (
               <div key={label as string} className="border-b border-line py-3 pr-3">
                 <dt className="text-sm text-muted">{label}</dt>
@@ -183,8 +189,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             ))}
           </dl>
           <p className="text-sm text-muted">
-            Voting never earns points, and battles with no votes score nothing for either side. Ties share a rank.
-            Ratings (Elo) are separate and still move with every result.
+            {t.howNote}
           </p>
         </section>
       )}

@@ -8,6 +8,7 @@ import { decodeToBuffer } from '@/lib/audio/analyze';
 import { STAGE_PUBLISH } from '@/lib/live/stage';
 import WaveformPlayer from '@/components/audio/WaveformPlayer';
 import { formatDb } from '@/lib/format';
+import { useI18n } from '@/components/i18n/I18nProvider';
 
 type Verdict = { ok: 'good' | 'warn' | 'bad'; title: string; detail: string };
 
@@ -33,6 +34,7 @@ const meanSquare = (b: AudioBuffer) => {
 
 /** Everything a beatboxer needs to know before going on stage: mic, settings, sound, and the live connection. */
 export default function MicCheck({ signedIn }: { signedIn: boolean }) {
+  const t = useI18n().t.mic;
   const rec = useHiFiRecorder({ maxSeconds: TEST_SECONDS });
   const [settings, setSettings] = useState<MediaTrackSettings | null>(null);
   const [verdicts, setVerdicts] = useState<Verdict[] | null>(null);
@@ -93,25 +95,25 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
       const highShare = meanSquare(await renderBand(buffer, 'highpass', 5000)) / total;
 
       const v: Verdict[] = [];
-      if (clips > 20 || a.peakDbfs > -0.3) v.push({ ok: 'bad', title: 'Your sound is clipping', detail: 'Peaks hit the ceiling and distort. Move a little back from the mic or turn your interface gain down.' });
-      else if ((a.integratedLufs ?? -70) < -36) v.push({ ok: 'warn', title: 'Very quiet', detail: 'Get closer to the mic or raise the gain. Quiet recordings lose detail.' });
-      else v.push({ ok: 'good', title: 'Levels are good', detail: `Loudness ${formatDb(a.integratedLufs, 'LUFS')}, peak ${formatDb(a.peakDbfs, 'dBFS')}, no clipping.` });
+      if (clips > 20 || a.peakDbfs > -0.3) v.push({ ok: 'bad', title: t.clipT, detail: t.clipD });
+      else if ((a.integratedLufs ?? -70) < -36) v.push({ ok: 'warn', title: t.quietT, detail: t.quietD });
+      else v.push({ ok: 'good', title: t.goodT, detail: t.goodD(formatDb(a.integratedLufs, 'LUFS'), formatDb(a.peakDbfs, 'dBFS')) });
 
       v.push(a.subRatio > 0.04
-        ? { ok: 'good', title: 'Low end comes through', detail: 'Bass, kicks and inward sounds reach the recording.' }
-        : { ok: 'warn', title: 'Little low end detected', detail: 'If you made bass sounds, your mic may be cutting them. Phone and laptop mics often do; a USB or dynamic mic fixes it.' });
+        ? { ok: 'good', title: t.lowOkT, detail: t.lowOkD }
+        : { ok: 'warn', title: t.lowBadT, detail: t.lowBadD });
       v.push(highShare > 0.003
-        ? { ok: 'good', title: 'Highs come through', detail: 'Clicks, hi-hats and snares keep their detail.' }
-        : { ok: 'warn', title: 'Highs sound muffled', detail: 'Clicks and hats lose their bite. Check that nothing covers the mic, and avoid Bluetooth mics.' });
+        ? { ok: 'good', title: t.highOkT, detail: t.highOkD }
+        : { ok: 'warn', title: t.highBadT, detail: t.highBadD });
       v.push(floor < -55
-        ? { ok: 'good', title: 'Quiet background', detail: Number.isFinite(floor) ? `Background noise around ${formatDb(floor, 'dB')}.` : 'Complete silence between sounds.' }
+        ? { ok: 'good', title: t.bgOkT, detail: Number.isFinite(floor) ? t.bgOkD(formatDb(floor, 'dB')) : t.bgSilent }
         : floor < -45
-          ? { ok: 'warn', title: 'Some background noise', detail: 'Fans, traffic or room noise are audible between sounds. A quieter room helps.' }
-          : { ok: 'bad', title: 'Noisy background', detail: 'Lots of noise between sounds. Find a quieter spot or move the mic away from fans and computers.' });
+          ? { ok: 'warn', title: t.bgSomeT, detail: t.bgSomeD }
+          : { ok: 'bad', title: t.bgBadT, detail: t.bgBadD });
       const processing = settings && (settings.noiseSuppression || settings.autoGainControl || settings.echoCancellation);
       v.push(processing
-        ? { ok: 'bad', title: 'Your browser is still processing the sound', detail: 'Noise suppression or auto gain is on. Use Chrome or Firefox on a computer for the cleanest sound.' }
-        : { ok: 'good', title: 'Voice filters are off', detail: 'Your sound goes out as you make it.' });
+        ? { ok: 'bad', title: t.procBadT, detail: t.procBadD }
+        : { ok: 'good', title: t.procOkT, detail: t.procOkD });
       setVerdicts(v);
     })();
   }, [rec.take, testing, settings]);
@@ -123,19 +125,19 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
     await rec.start();
   };
 
-  const onOff = (v: boolean | undefined) => (v ? <span className="text-loss">On</span> : <span className="text-win">Off</span>);
+  const onOff = (v: boolean | undefined) => (v ? <span className="text-loss">{t.on}</span> : <span className="text-win">{t.off}</span>);
   const live = rec.status === 'ready' || rec.status === 'recording' || rec.status === 'processing' || rec.status === 'done';
 
   return (
     <div className="grid gap-12">
       {/* ---------- 1. microphone ---------- */}
       <section className="grid gap-5">
-        <h2 className="text-2xl font-bold [font-stretch:112%]">1. Your microphone</h2>
+        <h2 className="text-2xl font-bold [font-stretch:112%]">{t.step1}</h2>
         {!live ? (
           <div className="grid justify-items-start gap-3">
-            <p className="max-w-[60ch] text-muted">Use the mic and headphones you’ll battle with. Nothing is saved or sent anywhere in this step.</p>
+            <p className="max-w-[60ch] text-muted">{t.step1Lead}</p>
             <button onClick={() => rec.prepare()} disabled={rec.status === 'requesting'} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-              {rec.status === 'requesting' ? 'Waiting for permission…' : 'Start the mic check'}
+              {rec.status === 'requesting' ? t.waiting : t.start}
             </button>
             {rec.error && <p role="alert" className="text-loss">{rec.error}</p>}
           </div>
@@ -143,18 +145,18 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
           <>
             {rec.devices.length > 1 && (
               <label className="grid max-w-md gap-1 text-sm">
-                <span className="text-muted">Microphone</span>
+                <span className="text-muted">{t.microphone}</span>
                 <select value={rec.deviceId} onChange={(e) => rec.selectDevice(e.target.value)} disabled={rec.status === 'recording'}
                   className="rounded-lg border border-line bg-surface px-3 py-2">
-                  {rec.devices.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Input ${i + 1}`}</option>)}
+                  {rec.devices.map((d, i) => <option key={d.deviceId} value={d.deviceId}>{d.label || t.input(i + 1)}</option>)}
                 </select>
               </label>
             )}
             <div className="grid max-w-2xl gap-2">
               {[
-                { ref: fullRef, label: 'Overall level', color: 'bg-signal' },
-                { ref: lowRef, label: 'Low end (bass, kicks)', color: 'bg-sub' },
-                { ref: highRef, label: 'Highs (clicks, hats, snares)', color: 'bg-win' },
+                { ref: fullRef, label: t.overall, color: 'bg-signal' },
+                { ref: lowRef, label: t.low, color: 'bg-sub' },
+                { ref: highRef, label: t.high, color: 'bg-win' },
               ].map((m) => (
                 <div key={m.label} className="grid grid-cols-[13rem_1fr] items-center gap-3 text-sm">
                   <span className="text-muted">{m.label}</span>
@@ -163,16 +165,16 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
                   </div>
                 </div>
               ))}
-              <p className="text-sm text-muted">Make some bass sounds, then some clicks and hats: each bar should react.</p>
+              <p className="text-sm text-muted">{t.meterHint}</p>
             </div>
 
             {settings && (
               <dl className="grid max-w-2xl grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3">
-                <div><dt className="text-muted">Noise suppression</dt><dd>{onOff(settings.noiseSuppression)}</dd></div>
-                <div><dt className="text-muted">Auto gain</dt><dd>{onOff(settings.autoGainControl)}</dd></div>
-                <div><dt className="text-muted">Echo cancellation</dt><dd>{onOff(settings.echoCancellation)}</dd></div>
-                <div><dt className="text-muted">Sample rate</dt><dd className="num">{settings.sampleRate ? `${settings.sampleRate / 1000} kHz` : '—'}</dd></div>
-                <div><dt className="text-muted">Channels</dt><dd className="num">{settings.channelCount ?? '—'}</dd></div>
+                <div><dt className="text-muted">{t.noise}</dt><dd>{onOff(settings.noiseSuppression)}</dd></div>
+                <div><dt className="text-muted">{t.agc}</dt><dd>{onOff(settings.autoGainControl)}</dd></div>
+                <div><dt className="text-muted">{t.echo}</dt><dd>{onOff(settings.echoCancellation)}</dd></div>
+                <div><dt className="text-muted">{t.rate}</dt><dd className="num">{settings.sampleRate ? `${settings.sampleRate / 1000} kHz` : '—'}</dd></div>
+                <div><dt className="text-muted">{t.channels}</dt><dd className="num">{settings.channelCount ?? '—'}</dd></div>
               </dl>
             )}
             {rec.warnings.length > 0 && (
@@ -181,15 +183,15 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
 
             <div className="grid justify-items-start gap-3">
               <button onClick={startTest} disabled={rec.status === 'recording' || rec.status === 'processing'} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-                {rec.status === 'recording' ? `Recording… ${Math.ceil(TEST_SECONDS - rec.elapsedMs / 1000)}` : rec.status === 'processing' ? 'Analysing…' : `Record a ${TEST_SECONDS}-second test`}
+                {rec.status === 'recording' ? t.recording(Math.ceil(TEST_SECONDS - rec.elapsedMs / 1000)) : rec.status === 'processing' ? t.analysing : t.record(TEST_SECONDS)}
               </button>
-              <p className="text-sm text-muted">Beatbox normally for {TEST_SECONDS} seconds, with a bit of everything, and a moment of silence.</p>
+              <p className="text-sm text-muted">{t.recordHint(TEST_SECONDS)}</p>
             </div>
 
             {rec.take && (
               <div className="grid max-w-3xl gap-3">
-                <WaveformPlayer src={URL.createObjectURL(rec.take.blob)} waveform={rec.take.analysis.waveform} durationMs={rec.take.analysis.durationMs} label="your test" />
-                <p className="text-sm text-muted">Listen back with headphones: this is exactly what the judges get in the replay.</p>
+                <WaveformPlayer src={URL.createObjectURL(rec.take.blob)} waveform={rec.take.analysis.waveform} durationMs={rec.take.analysis.durationMs} label={t.yourTest} />
+                <p className="text-sm text-muted">{t.listenBack}</p>
               </div>
             )}
             {verdicts && (
@@ -208,15 +210,14 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
 
       {/* ---------- 2. live connection ---------- */}
       <section className="grid gap-4">
-        <h2 className="text-2xl font-bold [font-stretch:112%]">2. Your live connection</h2>
+        <h2 className="text-2xl font-bold [font-stretch:112%]">{t.step2}</h2>
         <p className="max-w-[62ch] text-muted">
-          On stage your sound travels live to everyone in the room. This sends your mic through the real server, exactly like a battle,
-          and measures what arrives.
+          {t.step2Lead}
         </p>
         {!signedIn ? (
-          <p><Link href="/login?next=/mic-check" className="underline underline-offset-4">Log in</Link> to test your live connection.</p>
+          <p><Link href="/login?next=/mic-check" className="underline underline-offset-4">{t.logIn}</Link> {t.toTestLive}</p>
         ) : !live ? (
-          <p className="text-muted">Start the mic check above first.</p>
+          <p className="text-muted">{t.startAbove}</p>
         ) : (
           <LiveTest getStream={rec.getStream} />
         )}
@@ -226,6 +227,7 @@ export default function MicCheck({ signedIn }: { signedIn: boolean }) {
 }
 
 function LiveTest({ getStream }: { getStream: () => MediaStream | null }) {
+  const t = useI18n().t.mic;
   const [state, setState] = useState<'idle' | 'connecting' | 'running' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [hear, setHear] = useState(false);
@@ -252,7 +254,7 @@ function LiveTest({ getStream }: { getStream: () => MediaStream | null }) {
       const ticket = async (role: 'send' | 'listen') => {
         const res = await fetch('/api/livekit/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ micTest: role }) });
         const body = await res.json();
-        if (!res.ok) throw new Error(body.error ?? 'The test room couldn’t open.');
+        if (!res.ok) throw new Error(body.error ?? t.roomFailed);
         return body as { token: string; url: string };
       };
       const [s, l] = await Promise.all([ticket('send'), ticket('listen')]);
@@ -273,7 +275,7 @@ function LiveTest({ getStream }: { getStream: () => MediaStream | null }) {
       await listener.startAudio();
       await sender.connect(s.url, s.token);
       const source = getStream()?.getAudioTracks()[0];
-      if (!source) throw new Error('The microphone isn’t running.');
+      if (!source) throw new Error(t.micNotRunning);
       const mic = new LocalAudioTrack(source.clone(), undefined, true);
       await sender.localParticipant.publishTrack(mic, { source: Track.Source.Microphone, ...STAGE_PUBLISH });
       setState('running');
@@ -297,7 +299,7 @@ function LiveTest({ getStream }: { getStream: () => MediaStream | null }) {
         if (ticks >= 15) { window.clearInterval(timerRef.current); setState('done'); }
       }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The live test failed.');
+      setError(err instanceof Error ? err.message : t.liveFailed);
       setState('error');
       stop();
     }
@@ -308,29 +310,29 @@ function LiveTest({ getStream }: { getStream: () => MediaStream | null }) {
     <div className="grid max-w-3xl gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={() => { stop(); void run(); }} disabled={state === 'connecting' || state === 'running'} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-          {state === 'connecting' ? 'Connecting…' : state === 'running' ? 'Testing for 15 seconds…' : state === 'done' ? 'Test again' : 'Start the live test'}
+          {state === 'connecting' ? t.connecting : state === 'running' ? t.testing : state === 'done' ? t.again : t.startLive}
         </button>
         {(state === 'running') && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={hear} onChange={(e) => setHear(e.target.checked)} className="size-4 accent-[var(--signal)]" />
-            Hear yourself as the room hears you (headphones only)
+            {t.hear}
           </label>
         )}
       </div>
-      <p className="text-sm text-muted">Keep beatboxing during the test so there’s sound to measure.</p>
+      <p className="text-sm text-muted">{t.keepGoing}</p>
       {stats && (
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div><dt className="text-sm text-muted">Arriving</dt><dd className="num text-2xl">{Math.round(stats.kbps)} <span className="text-sm">kbps</span></dd></div>
-          <div><dt className="text-sm text-muted">Lost packets</dt><dd className={`num text-2xl ${stats.loss >= 2 ? 'text-loss' : ''}`}>{stats.loss.toFixed(1)}%</dd></div>
-          <div><dt className="text-sm text-muted">Jitter</dt><dd className={`num text-2xl ${stats.jitter >= 30 ? 'text-loss' : ''}`}>{Math.round(stats.jitter)} <span className="text-sm">ms</span></dd></div>
-          <div><dt className="text-sm text-muted">Round trip</dt><dd className={`num text-2xl ${(stats.rtt ?? 0) >= 300 ? 'text-loss' : ''}`}>{stats.rtt != null ? Math.round(stats.rtt) : '—'} <span className="text-sm">ms</span></dd></div>
+          <div><dt className="text-sm text-muted">{t.arriving}</dt><dd className="num text-2xl">{Math.round(stats.kbps)} <span className="text-sm">kbps</span></dd></div>
+          <div><dt className="text-sm text-muted">{t.lost}</dt><dd className={`num text-2xl ${stats.loss >= 2 ? 'text-loss' : ''}`}>{stats.loss.toFixed(1)}%</dd></div>
+          <div><dt className="text-sm text-muted">{t.jitter}</dt><dd className={`num text-2xl ${stats.jitter >= 30 ? 'text-loss' : ''}`}>{Math.round(stats.jitter)} <span className="text-sm">ms</span></dd></div>
+          <div><dt className="text-sm text-muted">{t.rtt}</dt><dd className={`num text-2xl ${(stats.rtt ?? 0) >= 300 ? 'text-loss' : ''}`}>{stats.rtt != null ? Math.round(stats.rtt) : '—'} <span className="text-sm">ms</span></dd></div>
         </dl>
       )}
       {state === 'done' && stats && (
         <p className={`rounded-xl border-l-4 bg-surface p-3 ${good ? 'border-win' : 'border-loss'}`}>
           {good
-            ? 'Your connection can carry a live battle in full quality.'
-            : 'Your connection is unstable. Use a cable instead of Wi-Fi, move closer to the router, or close downloads and video calls before you battle.'}
+            ? t.liveGood
+            : t.liveBad}
         </p>
       )}
       {error && <p role="alert" className="text-loss">{error}</p>}

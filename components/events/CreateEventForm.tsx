@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { eventRpc } from '@/lib/supabase/events';
+import { useI18n } from '@/components/i18n/I18nProvider';
 
 function Seg<T extends string | number | boolean>({ name, legend, value, onChange, options, note }: {
   name: string; legend: string; value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; note?: string;
@@ -30,6 +31,7 @@ function Seg<T extends string | number | boolean>({ name, legend, value, onChang
 const field = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5';
 
 export default function CreateEventForm() {
+  const c = useI18n().t.evNew;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [title, setTitle] = useState('');
@@ -61,7 +63,7 @@ export default function CreateEventForm() {
       });
       router.push(`/events/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The event wasn’t created.');
+      setError(err instanceof Error ? err.message : c.failed);
       setBusy(false);
     }
   }
@@ -71,41 +73,41 @@ export default function CreateEventForm() {
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-7">
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">Event name</span>
-        <input required minLength={3} maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder="e.g. Lisbon Online Cup 2026" />
+        <span className="text-muted">{c.name}</span>
+        <input required minLength={3} maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder={c.namePh} />
       </label>
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">Rules and prizes (optional)</span>
+        <span className="text-muted">{c.rules}</span>
         <textarea rows={4} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} className={field} />
       </label>
 
-      <Seg name="max" legend="Beatboxers in the eliminations (maximum)" value={maxP}
+      <Seg name="max" legend={c.maxP} value={maxP}
         onChange={(v) => { setMaxP(v); if (advance >= v) setAdvance([4, 8, 16, 32].filter((n) => n < v).pop() ?? 4); }}
         options={[8, 16, 24, 32, 48, 64].filter((n) => mainFormat !== 'seven_to_smoke' || n > 8).map((n) => ({ value: n, label: String(n) }))} />
-      <Seg name="main" legend="Format" value={mainFormat}
+      <Seg name="main" legend={c.format} value={mainFormat}
         onChange={(v) => { setMainFormat(v); if (v === 'seven_to_smoke') { setAdvance(8); if (maxP <= 8) setMaxP(16); } }}
-        options={[{ value: 'knockout', label: 'Knockout' }, { value: 'swiss', label: 'Swiss rounds' }, { value: 'seven_to_smoke', label: '7 to Smoke' }]}
+        options={[{ value: 'knockout', label: c.knockout }, { value: 'swiss', label: c.swiss }, { value: 'seven_to_smoke', label: c.smoke }]}
         note={mainFormat === 'seven_to_smoke'
-          ? 'The top 8 line up: winner stays on and scores a point, loser goes to the back. First to 7 wins. With 8 or fewer entrants you can skip the eliminations.'
-          : 'Both end with a small final (3rd place) and a final.'} />
-      <Seg name="adv" legend="How many go through" value={advance} onChange={setAdvance}
-        options={advanceOptions.map((n) => ({ value: n, label: `Top ${n}` }))} />
-      <Seg name="reg" legend="Registration stays open" value={regHours} onChange={setRegHours}
-        options={[{ value: 24, label: '1 day' }, { value: 72, label: '3 days' }, { value: 168, label: '1 week' }, { value: 336, label: '2 weeks' }]} />
+          ? c.smokeNote
+          : c.bracketNote} />
+      <Seg name="adv" legend={c.advance} value={advance} onChange={setAdvance}
+        options={advanceOptions.map((n) => ({ value: n, label: c.top(n) }))} />
+      <Seg name="reg" legend={c.regOpen} value={regHours} onChange={setRegHours}
+        options={[{ value: 24, label: c.day1 }, { value: 72, label: c.days3 }, { value: 168, label: c.week1 }, { value: 336, label: c.weeks2 }]} />
 
       <section className="grid gap-5 rounded-2xl border border-line p-5">
-        <h2 className="text-lg font-bold [font-stretch:112%]">Judges</h2>
-        <Seg name="jc" legend="Panel" value={judgeCount} onChange={setJudgeCount}
-          options={[{ value: 3, label: '3 judges' }, { value: 5, label: '5 judges' }]}
-          note="You host; judges can’t compete. You can replace a judge later if someone drops out." />
+        <h2 className="text-lg font-bold [font-stretch:112%]">{c.judges}</h2>
+        <Seg name="jc" legend={c.panel} value={judgeCount} onChange={setJudgeCount}
+          options={[{ value: 3, label: c.judgesN(3) }, { value: 5, label: c.judgesN(5) }]}
+          note={c.judgesNote} />
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: judgeCount }, (_, i) => (
             <label key={i} className="grid gap-1 text-sm">
-              <span className="text-muted">Judge {i + 1}</span>
+              <span className="text-muted">{c.judgeN(i + 1)}</span>
               <div className="flex items-center rounded-lg border border-line bg-surface focus-within:outline-2 focus-within:outline-signal">
                 <span className="pl-3 text-muted">@</span>
                 <input required value={judges[i]} onChange={(e) => setJudges((js) => js.map((x, j) => (j === i ? e.target.value.replace(/^@/, '').trim() : x)))}
-                  className="w-full bg-transparent px-1 py-2.5 outline-none" placeholder="handle" />
+                  className="w-full bg-transparent px-1 py-2.5 outline-none" placeholder={c.handle} />
               </div>
             </label>
           ))}
@@ -113,24 +115,24 @@ export default function CreateEventForm() {
       </section>
 
       <section className="grid gap-5 rounded-2xl border border-line p-5">
-        <h2 className="text-lg font-bold [font-stretch:112%]">Timing</h2>
-        <Seg name="sc" legend="Showcase length (eliminations)" value={showcase} onChange={setShowcase}
+        <h2 className="text-lg font-bold [font-stretch:112%]">{c.timing}</h2>
+        <Seg name="sc" legend={c.showcaseLen} value={showcase} onChange={setShowcase}
           options={[30, 45, 60, 90, 120].map((s) => ({ value: s, label: `${s} s` }))} />
-        <Seg name="rs" legend="Battle round length" value={roundSec} onChange={setRoundSec}
+        <Seg name="rs" legend={c.roundLen} value={roundSec} onChange={setRoundSec}
           options={[30, 45, 60, 90].map((s) => ({ value: s, label: `${s} s` }))} />
-        <Seg name="rn" legend="Rounds per battler" value={rounds} onChange={setRounds}
-          options={[{ value: 1, label: '1 round' }, { value: 2, label: '2 rounds' }]} />
-        <Seg name="vs" legend="Time for judges to vote in battles" value={voteSec} onChange={setVoteSec}
+        <Seg name="rn" legend={c.roundsPer} value={rounds} onChange={setRounds}
+          options={[{ value: 1, label: c.rounds(1) }, { value: 2, label: c.rounds(2) }]} />
+        <Seg name="vs" legend={c.voteTime} value={voteSec} onChange={setVoteSec}
           options={[10, 15, 30].map((s) => ({ value: s, label: `${s} s` }))} />
       </section>
 
-      <Seg name="ranked" legend="Ranking points" value={ranked} onChange={setRanked}
-        options={[{ value: false, label: 'Casual' }, { value: true, label: 'Ranked' }]}
-        note={ranked ? 'Ranked events award ranking points (1000 / 500 / 350 / 200 / 100) once a moderator approves the event.' : 'Casual events don’t touch the ranking.'} />
+      <Seg name="ranked" legend={c.points} value={ranked} onChange={setRanked}
+        options={[{ value: false, label: c.casual }, { value: true, label: c.ranked }]}
+        note={ranked ? c.rankedNote : c.casualNote} />
 
       {error && <p role="alert" className="text-loss">{error}</p>}
       <button disabled={busy} className="justify-self-start rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-        {busy ? 'Creating…' : 'Create event and open registration'}
+        {busy ? c.creating : c.submit}
       </button>
     </form>
   );

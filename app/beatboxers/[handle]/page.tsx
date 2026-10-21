@@ -9,12 +9,16 @@ import BadgeShelf, { type EarnedBadge } from '@/components/badges/BadgeShelf';
 import { Avatar } from '@/components/directory/BeatboxerCard';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
 import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, signed } from '@/lib/format';
+import { getT } from '@/lib/i18n/server';
+import { LOCALE_TAG } from '@/lib/i18n/config';
+import type { Dict } from '@/lib/i18n';
 import type { BattleWithPlayers, DirectoryEntry, ProfileBattle } from '@/lib/types';
 
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
-const OUTCOME = { W: 'Won', L: 'Lost', D: 'Drew' } as const;
-const resultText = (g: ProfileBattle) =>
-  g.result === 'forfeit' ? `${OUTCOME[g.outcome]} by forfeit` : g.outcome === 'D' ? 'Draw' : `${OUTCOME[g.outcome]} by decision`;
+const resultText = (g: ProfileBattle, t: Dict['profile']) => {
+  const o = { W: t.won, L: t.lost, D: t.drew }[g.outcome];
+  return g.result === 'forfeit' ? t.byForfeit(o) : g.outcome === 'D' ? t.draw : t.byDecision(o);
+};
 
 const SOCIALS: Record<string, string> = { instagram: 'Instagram', youtube: 'YouTube', tiktok: 'TikTok', x: 'X' };
 
@@ -22,6 +26,9 @@ export default async function ProfilePage({ params, searchParams }: {
   params: Promise<{ handle: string }>;
   searchParams: Promise<{ all?: string }>;
 }) {
+  const { locale, t: tr } = await getT();
+  const t = tr.profile;
+  const tag = LOCALE_TAG[locale];
   const { handle } = await params;
   const { all } = await searchParams;
   const supabase = await createClient();
@@ -54,8 +61,7 @@ export default async function ProfilePage({ params, searchParams }: {
     const kind = games[games.length - 1].outcome;
     let k = 0;
     for (let i = games.length - 1; i >= 0 && games[i].outcome === kind; i--) k++;
-    const word = kind === 'W' ? (k === 1 ? 'win' : 'wins') : kind === 'L' ? (k === 1 ? 'loss' : 'losses') : k === 1 ? 'draw' : 'draws';
-    streak = `${k} ${word}`;
+    streak = t.streak(k, kind);
   }
 
   const opp = new Map<string, { username: string; n: number; W: number; L: number; D: number; last: ProfileBattle }>();
@@ -68,14 +74,14 @@ export default async function ProfilePage({ params, searchParams }: {
   const top = opponents[0];
 
   const tiles: [string, React.ReactNode, string | null, boolean][] = [
-    ['Rating', profile.elo_rating, n < PROVISIONAL_BATTLES ? 'Provisional until 20 battles' : `Rank ${profile.global_rank} of ${total ?? '—'}`, true],
-    ['Peak rating', profile.peak_elo, null, true],
-    ['Battles', n, null, true],
-    ['Won, lost, drawn', `${profile.wins}–${profile.losses}–${profile.draws}`, null, true],
-    ['Win rate', winPct != null ? `${winPct}%` : '—', null, true],
-    ['Current streak', streak, null, false],
-    ['Forfeits', forfeits, 'Missed deadlines', true],
-    ['Most faced', top ? `@${top.username}` : '—', top ? `${top.n} ${top.n === 1 ? 'battle' : 'battles'}, ${top.W}–${top.L}–${top.D}` : null, false],
+    [t.rating, profile.elo_rating, n < PROVISIONAL_BATTLES ? t.provisional : t.rankOf(profile.global_rank, String(total ?? '—')), true],
+    [t.peak, profile.peak_elo, null, true],
+    [t.battles, n, null, true],
+    [t.wld, `${profile.wins}–${profile.losses}–${profile.draws}`, null, true],
+    [t.winRate, winPct != null ? `${winPct}%` : '—', null, true],
+    [t.currentStreak, streak, null, false],
+    [t.forfeits, forfeits, t.missed, true],
+    [t.mostFaced, top ? `@${top.username}` : '—', top ? t.facedSummary(top.n, `${top.W}–${top.L}–${top.D}`) : null, false],
   ];
 
   const history = [...games].reverse();
@@ -91,8 +97,8 @@ export default async function ProfilePage({ params, searchParams }: {
           {profile.featured_badge && <p><BadgeChip code={profile.featured_badge} /></p>}
           <p className="flex flex-wrap gap-x-5 gap-y-1 text-muted">
             {profile.full_name && <span>{profile.full_name}</span>}
-            {profile.country && <span><span aria-hidden="true">{flagEmoji(profile.country)} </span>{countryName(profile.country)}</span>}
-            <span>Joined {formatMonth(profile.created_at)}</span>
+            {profile.country && <span><span aria-hidden="true">{flagEmoji(profile.country)} </span>{countryName(profile.country, locale)}</span>}
+            <span>{t.joined(formatMonth(profile.created_at, tag))}</span>
           </p>
           {profile.bio && <p className="max-w-[62ch]">{profile.bio}</p>}
           {socials.length > 0 && (
@@ -103,9 +109,9 @@ export default async function ProfilePage({ params, searchParams }: {
         </div>
         <div className="flex gap-3">
           {isMe ? (
-            <Link href="/settings" className="rounded-full border border-line px-5 py-2.5">Edit profile</Link>
+            <Link href="/settings" className="rounded-full border border-line px-5 py-2.5">{t.edit}</Link>
           ) : (
-            <Link href={`/battles/new?opponent=${profile.username}`} className="rounded-full bg-ink px-5 py-2.5 text-paper">Challenge</Link>
+            <Link href={`/battles/new?opponent=${profile.username}`} className="rounded-full bg-ink px-5 py-2.5 text-paper">{t.challenge}</Link>
           )}
         </div>
       </header>
@@ -124,7 +130,7 @@ export default async function ProfilePage({ params, searchParams }: {
 
       {live.length > 0 && (
         <section className="grid gap-3">
-          <h2 className="text-xl font-bold [font-stretch:112%]">In progress</h2>
+          <h2 className="text-xl font-bold [font-stretch:112%]">{t.inProgress}</h2>
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {live.map((b) => <li key={b.id} className="grid"><BattleRow b={b} viewerId={auth.user?.id} /></li>)}
           </ul>
@@ -133,26 +139,26 @@ export default async function ProfilePage({ params, searchParams }: {
 
       {games.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line p-8 text-muted">
-          No finished battles yet.{' '}
-          {isMe ? <Link href="/battles/new" className="text-ink underline underline-offset-4">Start your first battle</Link> : null}
+          {t.noBattles}{' '}
+          {isMe ? <Link href="/battles/new" className="text-ink underline underline-offset-4">{t.startFirst}</Link> : null}
         </div>
       ) : (
         <>
           <section className="grid gap-3">
-            <h2 className="text-xl font-bold [font-stretch:112%]">Rating over time</h2>
+            <h2 className="text-xl font-bold [font-stretch:112%]">{t.ratingOverTime}</h2>
             <RatingChart games={games} peak={profile.peak_elo} current={profile.elo_rating} />
-            <p className="text-sm text-muted">The dashed line marks the peak rating.</p>
+            <p className="text-sm text-muted">{t.peakLine}</p>
           </section>
 
           <section className="grid gap-3">
-            <h2 className="text-xl font-bold [font-stretch:112%]">Opponents ({opponents.length})</h2>
+            <h2 className="text-xl font-bold [font-stretch:112%]">{t.opponents} ({opponents.length})</h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[34rem] border-collapse text-[0.925rem]">
                 <thead>
                   <tr className="border-b-2 border-ink text-left text-xs text-muted">
-                    <th scope="col" className="py-2 pr-3 font-semibold">Opponent</th>
-                    {['Battles', 'Won', 'Lost', 'Drawn'].map((h) => <th key={h} scope="col" className="py-2 pr-3 text-right font-semibold">{h}</th>)}
-                    <th scope="col" className="py-2 font-semibold">Last met</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">{t.opponent}</th>
+                    {[t.battles, t.colWon, t.colLost, t.colDrawn].map((h) => <th key={h} scope="col" className="py-2 pr-3 text-right font-semibold">{h}</th>)}
+                    <th scope="col" className="py-2 font-semibold">{t.lastMet}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -163,7 +169,7 @@ export default async function ProfilePage({ params, searchParams }: {
                       <td className="num py-2.5 pr-3 text-right text-win">{o.W}</td>
                       <td className="num py-2.5 pr-3 text-right text-loss">{o.L}</td>
                       <td className="num py-2.5 pr-3 text-right">{o.D}</td>
-                      <td className="py-2.5 whitespace-nowrap">{resultText(o.last)}, {formatAgo(o.last.finished_at)}</td>
+                      <td className="py-2.5 whitespace-nowrap">{resultText(o.last, t)}, {formatAgo(o.last.finished_at, Date.now(), tr.time)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -172,27 +178,27 @@ export default async function ProfilePage({ params, searchParams }: {
           </section>
 
           <section className="grid gap-3">
-            <h2 className="text-xl font-bold [font-stretch:112%]">Battle history</h2>
+            <h2 className="text-xl font-bold [font-stretch:112%]">{t.history}</h2>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[34rem] border-collapse text-[0.925rem]">
                 <thead>
                   <tr className="border-b-2 border-ink text-left text-xs text-muted">
-                    <th scope="col" className="py-2 pr-3 font-semibold">Date</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Opponent</th>
-                    <th scope="col" className="py-2 pr-3 font-semibold">Result</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-semibold">Votes</th>
-                    <th scope="col" className="py-2 text-right font-semibold">Rating change</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">{t.date}</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">{t.opponent}</th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">{t.result}</th>
+                    <th scope="col" className="py-2 pr-3 text-right font-semibold">{t.votes}</th>
+                    <th scope="col" className="py-2 text-right font-semibold">{t.ratingChange}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shown.map((g) => (
                     <tr key={g.battle_id} className="border-b border-line">
                       <td className="py-2.5 pr-3 whitespace-nowrap">
-                        <Link href={`/battles/${g.battle_id}`} className="underline-offset-4 hover:underline">{formatDate(g.finished_at)}</Link>
-                        {g.mode !== 'async' && <span className="ml-2 rounded bg-sub px-1 text-xs font-bold text-paper">{g.mode === 'stage' ? 'Stage' : 'Live'}</span>}
+                        <Link href={`/battles/${g.battle_id}`} className="underline-offset-4 hover:underline">{formatDate(g.finished_at, tag)}</Link>
+                        {g.mode !== 'async' && <span className="ml-2 rounded bg-sub px-1 text-xs font-bold text-paper">{g.mode === 'stage' ? t.chipStage : t.chipLive}</span>}
                       </td>
                       <td className="py-2.5 pr-3"><Link href={`/beatboxers/${g.opponent_username}`} className="underline-offset-4 hover:underline">@{g.opponent_username}</Link></td>
-                      <td className={`py-2.5 pr-3 ${g.outcome === 'W' ? 'text-win' : g.outcome === 'L' ? 'text-loss' : ''}`}>{resultText(g)}</td>
+                      <td className={`py-2.5 pr-3 ${g.outcome === 'W' ? 'text-win' : g.outcome === 'L' ? 'text-loss' : ''}`}>{resultText(g, t)}</td>
                       <td className="num py-2.5 pr-3 text-right">{g.result === 'forfeit' ? '—' : `${g.my_votes}–${g.their_votes}`}</td>
                       <td className="num py-2.5 text-right whitespace-nowrap">
                         {g.delta != null && <span className={g.delta >= 0 ? 'text-win' : 'text-loss'}>{signed(g.delta)}</span>}
@@ -213,7 +219,7 @@ export default async function ProfilePage({ params, searchParams }: {
       )}
       {!isMe && (
         <div className="border-t border-line pt-4">
-          <ReportButton profileId={profile.id} signedIn={!!auth.user} label="Report this profile" />
+          <ReportButton profileId={profile.id} signedIn={!!auth.user} label={tr.report.profile} />
         </div>
       )}
     </main>

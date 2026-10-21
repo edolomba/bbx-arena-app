@@ -3,12 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import EventCard from '@/components/events/EventCard';
 import BattleRow from '@/components/battle/BattleRow';
 import type { BattleWithPlayers, EventRow } from '@/lib/types';
+import { getT } from '@/lib/i18n/server';
 
 export const metadata = { title: 'My events' };
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 
 export default async function MyEventsPage() {
   const supabase = await createClient();
+  const { t } = await getT();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login?next=/my-events');
 
@@ -23,11 +25,11 @@ export default async function MyEventsPage() {
   ]);
 
   const roles = new Map<string, { e: EventRow; role: string }>();
-  for (const e of (hosted ?? []) as EventRow[]) roles.set(e.id, { e, role: 'Host' });
-  for (const r of (judging ?? []) as unknown as { event: EventRow }[]) if (r.event) roles.set(r.event.id, { e: r.event, role: 'Judge' });
+  for (const e of (hosted ?? []) as EventRow[]) roles.set(e.id, { e, role: t.ev.roleHost });
+  for (const r of (judging ?? []) as unknown as { event: EventRow }[]) if (r.event) roles.set(r.event.id, { e: r.event, role: t.ev.roleJudge });
   for (const r of (entered ?? []) as unknown as { status: string; event: EventRow }[]) {
     if (!r.event) continue;
-    const label = r.status === 'qualified' ? 'Competing, qualified' : r.status === 'eliminated' ? 'Competed' : r.status === 'removed' ? 'Removed' : 'Competing';
+    const label = r.status === 'qualified' ? t.ev.roleQualified : r.status === 'eliminated' ? t.ev.roleCompeted : r.status === 'removed' ? t.ev.roleRemoved : t.ev.roleCompeting;
     roles.set(r.event.id, { e: r.event, role: label });
   }
   const all = [...roles.values()].sort((a, b) => +new Date(b.e.created_at) - +new Date(a.e.created_at));
@@ -46,26 +48,26 @@ export default async function MyEventsPage() {
 
   return (
     <main className="mx-auto grid max-w-6xl gap-12 px-4 py-10 sm:px-6">
-      <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">My events</h1>
+      <h1 className="handle text-[clamp(2.5rem,7vw,4.5rem)] leading-none">{t.ev.myEvents}</h1>
 
       <section className="grid gap-4">
-        {heading(true, 'Open')}
+        {heading(true, t.ev.open)}
         {openEvents.length || openBattles.length ? (
           <>
             {openEvents.length > 0 && <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{openEvents.map(({ e, role }) => <li key={e.id} className="grid"><EventCard e={e} role={role} /></li>)}</ul>}
             {openBattles.length > 0 && <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{openBattles.map((b) => <li key={b.id} className="grid"><BattleRow b={b} viewerId={user.id} /></li>)}</ul>}
           </>
-        ) : empty('Nothing open. Register for an event or start a battle.')}
+        ) : empty(t.ev.myNoneOpen)}
       </section>
 
       <section className="grid gap-4">
-        {heading(false, 'Finished')}
+        {heading(false, t.ev.finished)}
         {doneEvents.length || doneBattles.length ? (
           <>
             {doneEvents.length > 0 && <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{doneEvents.map(({ e, role }) => <li key={e.id} className="grid"><EventCard e={e} role={role} /></li>)}</ul>}
             {doneBattles.length > 0 && <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{doneBattles.map((b) => <li key={b.id} className="grid"><BattleRow b={b} viewerId={user.id} /></li>)}</ul>}
           </>
-        ) : empty('Nothing finished yet.')}
+        ) : empty(t.ev.myNoneFinished)}
       </section>
     </main>
   );

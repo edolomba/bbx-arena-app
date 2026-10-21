@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/I18nProvider';
+
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -24,6 +26,8 @@ const SOCIALS = [
 ];
 
 export default function ProfileForm({ initial }: { initial: Initial }) {
+  const { locale, t: tr } = useI18n();
+  const t = tr.settings;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [fullName, setFullName] = useState(initial.full_name ?? '');
@@ -33,8 +37,8 @@ export default function ProfileForm({ initial }: { initial: Initial }) {
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const countries = useMemo(
-    () => COUNTRY_CODES.map((c) => ({ c, name: countryName(c) })).sort((a, b) => a.name.localeCompare(b.name)),
-    [],
+    () => COUNTRY_CODES.map((c) => ({ c, name: countryName(c, locale) })).sort((a, b) => a.name.localeCompare(b.name, locale)),
+    [locale],
   );
 
   async function onSubmit(e: React.FormEvent) {
@@ -46,7 +50,7 @@ export default function ProfileForm({ initial }: { initial: Initial }) {
     );
     const bad = Object.entries(cleanLinks).find(([, v]) => !/^https:\/\/\S+$/.test(v));
     if (bad) {
-      setError(`The ${SOCIALS.find((s) => s.key === bad[0])?.label} link must start with https://`);
+      setError(t.linkMustStart(SOCIALS.find((s) => s.key === bad[0])?.label ?? ''));
       setState('idle');
       return;
     }
@@ -68,23 +72,23 @@ export default function ProfileForm({ initial }: { initial: Initial }) {
   return (
     <form onSubmit={onSubmit} className="grid max-w-xl gap-5">
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">Name (optional)</span>
+        <span className="text-muted">{t.name}</span>
         <input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={80} className={field} />
       </label>
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">Country</span>
+        <span className="text-muted">{t.country}</span>
         <select value={country} onChange={(e) => setCountry(e.target.value)} className={field}>
-          <option value="">Prefer not to say</option>
+          <option value="">{t.preferNot}</option>
           {countries.map(({ c, name }) => <option key={c} value={c}>{name}</option>)}
         </select>
       </label>
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">Bio</span>
+        <span className="text-muted">{t.bio}</span>
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} rows={4} className={field} />
         <span className="text-muted">{bio.length} / 500</span>
       </label>
       <fieldset className="grid gap-3">
-        <legend className="mb-2 text-sm text-muted">Links</legend>
+        <legend className="mb-2 text-sm text-muted">{t.links}</legend>
         {SOCIALS.map((s) => (
           <label key={s.key} className="grid gap-1 text-sm">
             <span>{s.label}</span>
@@ -96,9 +100,9 @@ export default function ProfileForm({ initial }: { initial: Initial }) {
       {error && <p role="alert" className="text-loss">{error}</p>}
       <div className="flex items-center gap-4">
         <button disabled={state === 'saving'} className="rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-          {state === 'saving' ? 'Saving…' : 'Save profile'}
+          {state === 'saving' ? t.saving : t.save}
         </button>
-        {state === 'saved' && <span role="status" className="text-win">Saved</span>}
+        {state === 'saved' && <span role="status" className="text-win">{t.saved}</span>}
       </div>
     </form>
   );

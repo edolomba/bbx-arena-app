@@ -1,5 +1,7 @@
 'use client';
 
+import { useI18n } from '@/components/i18n/I18nProvider';
+
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -19,6 +21,7 @@ const isStandalone = () =>
 
 /** Turns phone/computer notifications on or off for this device. */
 export default function PushToggle({ compact = false }: { compact?: boolean }) {
+  const t = useI18n().t.settings;
   const supabase = useMemo(() => createClient(), []);
   const [state, setState] = useState<State>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export default function PushToggle({ compact = false }: { compact?: boolean }) {
       if (error) throw error;
       setState('on');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Notifications couldn’t be turned on.');
+      setError(err instanceof Error ? err.message : t.pushFailed);
       setState('off');
     }
   }
@@ -79,35 +82,34 @@ export default function PushToggle({ compact = false }: { compact?: boolean }) {
   const box = compact ? 'grid gap-2 border-b border-line px-4 py-3 text-sm' : 'grid max-w-xl gap-3 rounded-2xl border border-line p-5';
 
   return (
-    <section className={box} aria-label="Phone notifications">
-      {!compact && <h2 className="text-xl font-bold [font-stretch:112%]">Phone and computer notifications</h2>}
+    <section className={box} aria-label={t.pushLabel}>
+      {!compact && <h2 className="text-xl font-bold [font-stretch:112%]">{t.pushTitle}</h2>}
       {state === 'ios-install' && (
         <p className={compact ? 'text-muted' : ''}>
-          On iPhone, notifications work once BBX Arena is on your home screen: tap <strong>Share</strong>, then
-          <strong> Add to Home Screen</strong>, and open it from there.
+          {t.iphone1} <strong>{t.share}</strong>{t.iphone2} <strong>{t.addHome}</strong>{t.iphone3}
         </p>
       )}
-      {state === 'unsupported' && <p className="text-muted">This browser can’t receive notifications. Try Chrome, Edge, Firefox or Safari.</p>}
+      {state === 'unsupported' && <p className="text-muted">{t.unsupported}</p>}
       {state === 'blocked' && (
         <p className={compact ? 'text-muted' : ''}>
-          Notifications are blocked for this site. Allow them in your browser’s site settings (the icon next to the address), then reload.
+          {t.blocked}
         </p>
       )}
       {(state === 'off' || state === 'working') && (
         <>
           <p className={compact ? 'text-muted' : ''}>
-            Get told when you’re challenged, when it’s your turn and when your live battle starts, even with the site closed.
+            {t.pushPitch}
           </p>
           <button onClick={turnOn} disabled={state === 'working'}
             className="justify-self-start rounded-full bg-ink px-4 py-2 text-paper disabled:opacity-60">
-            {state === 'working' ? 'Turning on…' : 'Turn on notifications'}
+            {state === 'working' ? t.turningOn : t.turnOn}
           </button>
         </>
       )}
       {state === 'on' && (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-win">Notifications are on for this device.</p>
-          <button onClick={turnOff} className="rounded-full border border-line px-4 py-2 text-sm">Turn off</button>
+          <p className="text-win">{t.pushOn}</p>
+          <button onClick={turnOff} className="rounded-full border border-line px-4 py-2 text-sm">{t.turnOff}</button>
         </div>
       )}
       {error && <p role="alert" className="text-sm text-loss">{error}</p>}

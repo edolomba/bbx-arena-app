@@ -23,15 +23,19 @@ export function flagEmoji(country: string | null): string {
   return String.fromCodePoint(...[...country].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
-const regionNames =
-  typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-    ? new Intl.DisplayNames(['en'], { type: 'region' })
-    : null;
+const regionCache = new Map<string, Intl.DisplayNames | null>();
+const regionNames = (locale: string) => {
+  if (!regionCache.has(locale)) {
+    regionCache.set(locale, typeof Intl !== 'undefined' && 'DisplayNames' in Intl ? new Intl.DisplayNames([locale], { type: 'region' }) : null);
+  }
+  return regionCache.get(locale) ?? null;
+};
 
-export function countryName(country: string | null): string {
+/** Country name in the reader's language ("BR" -> "Brazil" / "Brasil" / "Brésil"). */
+export function countryName(country: string | null, locale = 'en'): string {
   if (!country) return '';
   try {
-    return regionNames?.of(country) ?? country;
+    return regionNames(locale)?.of(country) ?? country;
   } catch {
     return country;
   }
@@ -70,11 +74,11 @@ export function formatAgo(iso: string, now = Date.now(), w: TimeWords = EN_TIME)
   return y === 1 ? w.yearAgo : w.yearsAgo(y);
 }
 
-export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+export const formatDate = (iso: string, tag = 'en-GB') =>
+  new Date(iso).toLocaleDateString(tag, { day: 'numeric', month: 'short', year: 'numeric' });
 
-export const formatMonth = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+export const formatMonth = (iso: string, tag = 'en-GB') =>
+  new Date(iso).toLocaleDateString(tag, { month: 'long', year: 'numeric' });
 
 export const signed = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
 

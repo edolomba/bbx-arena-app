@@ -14,7 +14,7 @@ export async function submitShowcase(supabase: SupabaseClient, eventId: string, 
   const { error: up } = await supabase.storage
     .from(AUDIO_BUCKET)
     .upload(path, take.blob, { contentType: take.contentType, upsert: false, cacheControl: '31536000' });
-  if (up) throw new Error(`The upload didn’t finish: ${up.message}`);
+  if (up) throw new Error(up.message);
   const a = take.analysis;
   await eventRpc(supabase, 'submit_showcase', {
     p_event: eventId,

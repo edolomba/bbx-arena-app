@@ -1,8 +1,12 @@
 import { formatDate } from '@/lib/format';
+import { getT } from '@/lib/i18n/server';
+import { LOCALE_TAG } from '@/lib/i18n/config';
 import type { ProfileBattle } from '@/lib/types';
 
 /** Rating after every battle, starting from 1200. Pure SVG, server-rendered. */
-export default function RatingChart({ games, peak, current }: { games: ProfileBattle[]; peak: number; current: number }) {
+export default async function RatingChart({ games, peak, current }: { games: ProfileBattle[]; peak: number; current: number }) {
+  const { locale, t: tr } = await getT();
+  const t = tr.profile;
   const rated = games.filter((g) => g.elo_after != null);
   if (rated.length < 2) return null;
   const vals = [1200, ...rated.map((g) => g.elo_after as number)];
@@ -24,15 +28,15 @@ export default function RatingChart({ games, peak, current }: { games: ProfileBa
         <span>{min}</span>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img"
-        aria-label={`Rating went from 1200 to ${current} over ${rated.length} battles, peaking at ${peak}`}
+        aria-label={t.chartLabel(current, rated.length, peak)}
         className="block h-44 w-full border-b border-line">
         <path d={`${line}L${W},${H}L0,${H}Z`} className="fill-signal/10" />
         <line x1="0" x2={W} y1={y(peak)} y2={y(peak)} vectorEffect="non-scaling-stroke" className="stroke-muted" strokeDasharray="4 4" />
         <path d={line} vectorEffect="non-scaling-stroke" className="fill-none stroke-signal" strokeWidth={2} strokeLinejoin="round" />
       </svg>
       <div className="col-start-2 flex justify-between text-xs text-muted" aria-hidden="true">
-        <span>{formatDate(rated[0].finished_at)}</span>
-        <span>Latest battle</span>
+        <span>{formatDate(rated[0].finished_at, LOCALE_TAG[locale])}</span>
+        <span>{t.latest}</span>
       </div>
     </div>
   );
