@@ -15,10 +15,11 @@ export default async function Home() {
   const supabase = await createClient();
   const { t } = await getT();
   const nowIso = new Date().toISOString();
-  const [{ data: { user } }, live, voting, top, groups, nPeople, nBattles, nEvents] = await Promise.all([
+  const [{ data: { user } }, live, voting, open, top, groups, nPeople, nBattles, nEvents] = await Promise.all([
     supabase.auth.getUser(),
     supabase.from('battles').select(SELECT).in('mode', ['live', 'stage']).in('status', ['active', 'live']).order('starts_at').limit(6),
     supabase.from('battles').select(SELECT).eq('status', 'voting').order('voting_ends_at').limit(6),
+    supabase.from('battles').select(SELECT).eq('status', 'open').eq('is_listed', true).order('created_at', { ascending: false }).limit(6),
     supabase.rpc('rating_board', { p_limit: 3 }),
     supabase.from('event_groups').select('*, host:profiles!event_groups_host_id_fkey(username)').gte('ends_at', nowIso).order('starts_at').limit(3),
     supabase.from('directory_entries').select('id', { count: 'exact', head: true }),
@@ -27,6 +28,7 @@ export default async function Home() {
   ]);
   const liveBattles = (live.data ?? []) as BattleWithPlayers[];
   const votingBattles = (voting.data ?? []) as BattleWithPlayers[];
+  const openBattles = ((open.data ?? []) as BattleWithPlayers[]).filter((b) => b.challenger_id !== user?.id);
   const podium = (top.data ?? []) as PodiumRow[];
   const upcoming = (groups.data ?? []) as EventGroup[];
   const { data: cats } = upcoming.length
@@ -135,6 +137,7 @@ export default async function Home() {
       </section>
 
       {battles(t.home.live, '/battles?tab=live', liveBattles, t.home.liveEmpty)}
+      {battles(t.battles.tabOpen, '/battles?tab=open', openBattles, t.home.challengeEmpty)}
       {battles(t.home.vote, '/battles?tab=voting', votingBattles, t.home.voteEmpty)}
 
       <FeaturedStory />

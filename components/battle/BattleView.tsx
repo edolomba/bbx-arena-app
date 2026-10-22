@@ -263,6 +263,17 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
             )}
           </div>
         )}
+        {battle.mode === 'async' && (battle.status === 'open' || battle.status === 'pending') && currentUserId === battle.challenger_id && (
+          battle.turn_number >= 1 ? (
+            <p className="rounded-2xl border border-win/40 bg-win/10 p-4 text-win">{tb.preDone}</p>
+          ) : (
+            <section className="grid gap-3 rounded-2xl border border-gold/30 bg-gold/5 p-5">
+              <h2 className="text-xl font-bold [font-stretch:112%]">{tb.preTitle}</h2>
+              <p className="max-w-[62ch] text-muted">{tb.preHint}</p>
+              <AudioRecorder maxSeconds={battle.round_duration_seconds} onSubmit={handleSubmit} submitLabel={tb.preSubmit} />
+            </section>
+          )
+        )}
         {!currentUserId && (battle.status === 'open' || battle.status === 'pending') && (
           <p><Link href={`/login?next=/battles/${battle.id}`} className="underline underline-offset-4">{tb.logIn}</Link> {tb.toTake}</p>
         )}
