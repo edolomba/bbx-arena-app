@@ -7,6 +7,7 @@ import { castVote, stageRpc, submitTake } from '@/lib/supabase/battles';
 import { getPlaybackContext } from '@/lib/audio/playback-bus';
 import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
+import VoiceControls, { type RoomRole } from '@/components/live/VoiceControls';
 import { STAGE_LISTEN_GRACE_MS, STAGE_PUBLISH, slotKey } from '@/lib/live/stage';
 import { formatClock, formatTime } from '@/lib/format';
 import { useI18n } from '@/components/i18n/I18nProvider';
@@ -64,6 +65,8 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
   const [replacement, setReplacement] = useState('');
 
   const roomRef = useRef<Room | null>(null);
+  const [liveRoom, setLiveRoom] = useState<Room | null>(null);
+  const [myRole, setMyRole] = useState<RoomRole>('audience');
   const micRef = useRef<LocalAudioTrack | null>(null);
   const audioEls = useRef(new Map<string, HTMLMediaElement>());
   const analysers = useRef(new Map<string, AnalyserNode>());
@@ -111,6 +114,8 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
       const room = new Room({ adaptiveStream: false, dynacast: false });
       roomRef.current = room;
+      setLiveRoom(room);
+      if (body.role) setMyRole(body.role as RoomRole);
       room
         .on(RoomEvent.ConnectionStateChanged, (s) => setConnection(s))
         .on(RoomEvent.ParticipantConnected, refreshPresence)
@@ -167,6 +172,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
   const counting = inRoundPhase && t < roundStart;
   const performing = inRoundPhase && t >= roundStart && t < roundEnd;
   const audibleUser = inRoundPhase && t >= roundStart && t < roundEnd + STAGE_LISTEN_GRACE_MS ? slotUser(slot!) : null;
+  const roundWindow = inRoundPhase && t < roundEnd + STAGE_LISTEN_GRACE_MS;
   const performerNow = inRoundPhase ? slotUser(slot!) : null;
   const myTurn = !!performerNow && performerNow === currentUserId;
   const roundsDone = slot !== null && (phase !== 'round' || t >= roundEnd) ? slot + 1 : slot ?? 0;
@@ -176,7 +182,8 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
   // Listeners hear only the performer whose round is running.
   useEffect(() => {
     audioEls.current.forEach((el, identity) => {
-      el.muted = identity !== audibleUser;
+      // Outside a round everyone who talks is heard; during a round, only the battler on stage.
+      el.muted = roundWindow ? identity !== audibleUser : false;
     });
   });
 
@@ -209,7 +216,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
     } else if (recordingKey.current) {
       const round = slotRound(Number(recordingKey.current.split(':')[0]));
       recordingKey.current = null;
-      void mic?.mute();
+      // The voice panel puts the mic back the way the battler had it.
       (async () => {
         const take = await rec.stop();
         if (!take || !currentUserId) {
@@ -514,6 +521,12 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
             </p>
           ))}
         </section>
+      )}
+
+      {joined && (
+        <VoiceControls room={liveRoom} role={myRole} kind="battle" roomId={battle.id}
+          roundActive={roundWindow} myRoundLive={myTurn && performing}
+          performerMic={isPerformer ? micRef.current : null} publishOptions={STAGE_PUBLISH} />
       )}
 
       {/* ---------------- Running order ---------------- */}

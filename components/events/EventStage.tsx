@@ -7,6 +7,7 @@ import { eventRpc, submitShowcase } from '@/lib/supabase/events';
 import { getPlaybackContext } from '@/lib/audio/playback-bus';
 import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
+import VoiceControls, { type RoomRole } from '@/components/live/VoiceControls';
 import { STAGE_LISTEN_GRACE_MS, STAGE_PUBLISH } from '@/lib/live/stage';
 import { formatClock, formatTime } from '@/lib/format';
 import { useI18n } from '@/components/i18n/I18nProvider';
@@ -53,6 +54,8 @@ export default function EventStage({ event, entries, performedIds, currentUserId
   const [nextSession, setNextSession] = useState('');
 
   const roomRef = useRef<Room | null>(null);
+  const [liveRoom, setLiveRoom] = useState<Room | null>(null);
+  const [myRole, setMyRole] = useState<RoomRole>('audience');
   const micRef = useRef<LocalAudioTrack | null>(null);
   const audioEls = useRef(new Map<string, HTMLMediaElement>());
   const analysers = useRef(new Map<string, AnalyserNode>());
@@ -85,6 +88,8 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       if (!res.ok) throw new Error(body.error ?? ts.roomFailed);
       const room = new Room({ adaptiveStream: false, dynacast: false });
       roomRef.current = room;
+      setLiveRoom(room);
+      if (body.role) setMyRole(body.role as RoomRole);
       const count = () => setAudience(room.numParticipants);
       room
         .on(RoomEvent.ConnectionStateChanged, (s) => setConnection(s))
@@ -137,11 +142,13 @@ export default function EventStage({ event, entries, performedIds, currentUserId
   const counting = !!onStage && t < start;
   const performing = !!onStage && t >= start && t < end;
   const audible = !!onStage && t >= start && t < end + STAGE_LISTEN_GRACE_MS ? onStage : null;
+  const roundWindow = !!onStage && t < end + STAGE_LISTEN_GRACE_MS;
   const myTurn = onStage === currentUserId;
   const nextUp = order.find((e) => !performedIds.includes(e.profile_id) && e.profile_id !== onStage);
 
   useEffect(() => {
-    audioEls.current.forEach((el, id) => { el.muted = id !== audible; });
+    // Outside a showcase everyone who talks is heard; during one, only the beatboxer on stage.
+    audioEls.current.forEach((el, id) => { el.muted = roundWindow ? id !== audible : false; });
   });
 
   // Performer: mic open and recording exactly during their showcase.
@@ -156,7 +163,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       setUpload(ts.recording);
     } else if (recordingKey.current) {
       recordingKey.current = null;
-      void micRef.current?.mute();
+      // The voice panel puts the mic back the way the beatboxer had it.
       (async () => {
         const take = await rec.stop();
         if (!take || !currentUserId) { setUpload(ts.failed(tv.nothingRecorded)); return; }
@@ -308,6 +315,12 @@ export default function EventStage({ event, entries, performedIds, currentUserId
           )}
           <p className="text-sm text-muted">{tv.stageHint}</p>
         </section>
+      )}
+
+      {joined && (
+        <VoiceControls room={liveRoom} role={myRole} kind="event" roomId={event.id}
+          roundActive={roundWindow} myRoundLive={myTurn && performing}
+          performerMic={isPerformer ? micRef.current : null} publishOptions={STAGE_PUBLISH} />
       )}
 
       <section className="grid gap-3">

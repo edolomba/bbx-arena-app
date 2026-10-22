@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canTalk, type RoomRole } from '@/lib/livekit/server';
 import { AccessToken, TrackSource } from 'livekit-server-sdk';
 import { createClient } from '@/lib/supabase/server';
 
@@ -43,22 +44,24 @@ export async function POST(request: Request) {
     if (!ev || !['eliminations', 'main'].includes(ev.status)) {
       return NextResponse.json({ error: 'This event has no live part right now.' }, { status: 409 });
     }
-    let performer = false;
+    let role: RoomRole = 'audience';
     let name = 'Guest';
     if (user) {
-      const [{ data: entry }, { data: p }] = await Promise.all([
-        supabase.from('event_entries').select('status').eq('event_id', ev.id).eq('profile_id', user.id).maybeSingle(),
+      const [{ data: r }, { data: p }] = await Promise.all([
+        supabase.rpc('room_access', { p_kind: 'event', p_room: ev.id }),
         supabase.from('profiles').select('username').eq('id', user.id).maybeSingle(),
       ]);
-      performer = !!entry && ['registered', 'qualified'].includes(entry.status);
+      role = (r as RoomRole) ?? 'audience';
       if (p?.username) name = `@${p.username}`;
     }
-    const token = new AccessToken(key, secret, { identity: user?.id ?? `guest-${crypto.randomUUID()}`, name, ttl: '6h' });
+    if (role === 'banned') return NextResponse.json({ error: 'The host removed you from this room.' }, { status: 403 });
+    const performer = canTalk(role);
+    const token = new AccessToken(key, secret, { identity: user?.id ?? `guest-${crypto.randomUUID()}`, name, ttl: '6h', attributes: { role } });
     token.addGrant({
       room: `event-${ev.id}`, roomJoin: true, canSubscribe: true, canPublish: performer, canPublishData: false,
       canPublishSources: performer ? [TrackSource.MICROPHONE] : [],
     });
-    return NextResponse.json({ token: await token.toJwt(), url, role: performer ? 'performer' : 'audience' });
+    return NextResponse.json({ token: await token.toJwt(), url, role });
   }
   const [{ data: { user } }, { data: b }] = await Promise.all([
     supabase.auth.getUser(),
@@ -72,17 +75,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'The room opens 30 minutes before the start.' }, { status: 409 });
   }
 
-  const performer = !!user && (user.id === b.challenger_id || user.id === b.opponent_id);
+  let role: RoomRole = 'audience';
   let name = 'Guest';
   if (user) {
-    const { data: p } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle();
+    const [{ data: r }, { data: p }] = await Promise.all([
+      supabase.rpc('room_access', { p_kind: 'battle', p_room: b.id }),
+      supabase.from('profiles').select('username').eq('id', user.id).maybeSingle(),
+    ]);
+    role = (r as RoomRole) ?? 'audience';
     if (p?.username) name = `@${p.username}`;
   }
+  if (role === 'banned') return NextResponse.json({ error: 'The host removed you from this room.' }, { status: 403 });
+  const performer = canTalk(role);
 
   const token = new AccessToken(key, secret, {
     identity: user?.id ?? `guest-${crypto.randomUUID()}`,
     name,
     ttl: '3h',
+    attributes: { role },
   });
   token.addGrant({
     room: `stage-${b.id}`,
@@ -93,5 +103,5 @@ export async function POST(request: Request) {
     canPublishSources: performer ? [TrackSource.MICROPHONE] : [],
   });
 
-  return NextResponse.json({ token: await token.toJwt(), url, role: performer ? 'performer' : 'audience' });
+  return NextResponse.json({ token: await token.toJwt(), url, role });
 }
