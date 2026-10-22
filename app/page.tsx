@@ -4,6 +4,7 @@ import BattleRow from '@/components/battle/BattleRow';
 import BetaNotice from '@/components/feedback/BetaNotice';
 import Podium, { type PodiumRow } from '@/components/ranking/Podium';
 import GroupCard from '@/components/events/GroupCard';
+import FeaturedStory from '@/components/home/FeaturedStory';
 import { getT } from '@/lib/i18n/server';
 import type { BattleWithPlayers, EventGroup, EventRow } from '@/lib/types';
 
@@ -88,7 +89,7 @@ export default async function Home() {
         </div>
         {stats.some((s) => s.n > 0) && (
           <dl className="flex flex-wrap gap-x-10 gap-y-3 pt-2">
-            {stats.map((s) => (
+            {stats.filter((s) => s.n > 0).map((s) => (
               <div key={s.label} className="grid">
                 <dt className="sr-only">{s.label}</dt>
                 <dd className="num text-3xl font-bold text-gold">{s.n.toLocaleString()}</dd>
@@ -135,6 +136,8 @@ export default async function Home() {
 
       {battles(t.home.live, '/battles?tab=live', liveBattles, t.home.liveEmpty)}
       {battles(t.home.vote, '/battles?tab=voting', votingBattles, t.home.voteEmpty)}
+
+      <FeaturedStory />
     </main>
   );
 }
