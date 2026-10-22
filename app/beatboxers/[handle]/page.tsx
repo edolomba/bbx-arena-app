@@ -6,7 +6,7 @@ import RatingChart from '@/components/profile/RatingChart';
 import ReportButton from '@/components/moderation/ReportButton';
 import BadgeChip from '@/components/badges/BadgeChip';
 import BadgeShelf, { type EarnedBadge } from '@/components/badges/BadgeShelf';
-import { Avatar } from '@/components/directory/BeatboxerCard';
+import { Avatar, FormStrip } from '@/components/directory/BeatboxerCard';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
 import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, signed } from '@/lib/format';
 import { getT } from '@/lib/i18n/server';
@@ -74,7 +74,6 @@ export default async function ProfilePage({ params, searchParams }: {
   const top = opponents[0];
 
   const tiles: [string, React.ReactNode, string | null, boolean][] = [
-    [t.rating, profile.elo_rating, n < PROVISIONAL_BATTLES ? t.provisional : t.rankOf(profile.global_rank, String(total ?? '—')), true],
     [t.peak, profile.peak_elo, null, true],
     [t.battles, n, null, true],
     [t.wld, `${profile.wins}–${profile.losses}–${profile.draws}`, null, true],
@@ -85,43 +84,62 @@ export default async function ProfilePage({ params, searchParams }: {
   ];
 
   const history = [...games].reverse();
+  const ring: 'gold' | 'elite' | 'muted' = n === 0 ? 'muted' : profile.global_rank === 1 ? 'gold' : profile.global_rank <= 10 ? 'elite' : 'muted';
   const shown = all ? history : history.slice(0, 15);
   const socials = Object.entries(profile.social_links ?? {}).filter(([k, v]) => SOCIALS[k] && /^https:\/\//.test(v));
 
   return (
     <main className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6">
-      <header className="flex flex-wrap items-center gap-5">
-        <Avatar username={profile.username} url={profile.avatar_url} size="lg" />
-        <div className="grid min-w-0 flex-1 gap-2">
-          <h1 className="handle text-[clamp(2rem,6vw,4rem)] leading-none break-all">@{profile.username}</h1>
-          {profile.featured_badge && <p><BadgeChip code={profile.featured_badge} /></p>}
-          <p className="flex flex-wrap gap-x-5 gap-y-1 text-muted">
-            {profile.full_name && <span>{profile.full_name}</span>}
-            {profile.country && <span><span aria-hidden="true">{flagEmoji(profile.country)} </span>{countryName(profile.country, locale)}</span>}
-            <span>{t.joined(formatMonth(profile.created_at, tag))}</span>
-          </p>
-          {profile.bio && <p className="max-w-[62ch]">{profile.bio}</p>}
-          {socials.length > 0 && (
-            <p className="flex flex-wrap gap-4 text-sm">
-              {socials.map(([k, v]) => <a key={k} href={v} rel="noopener noreferrer nofollow" target="_blank" className="underline underline-offset-4">{SOCIALS[k]}</a>)}
+      <header className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-surface-2 via-surface to-paper p-6 sm:p-8">
+        <span className={`pointer-events-none absolute -top-32 -right-24 size-80 rounded-full blur-3xl ${ring === 'gold' ? 'bg-gold/15' : 'bg-sub/12'}`} aria-hidden="true" />
+        <div className="relative grid gap-6 md:grid-cols-[auto_1fr_auto] md:items-center">
+          <Avatar username={profile.username} url={profile.avatar_url} size="xl" ring={ring} />
+          <div className="grid min-w-0 gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {n > 0 && (
+                <span className={`rounded-full border px-2.5 py-0.5 font-mono text-xs tracking-widest uppercase ${ring === 'gold' ? 'border-gold/50 bg-gold/10 text-gold' : ring === 'elite' ? 'border-sub/50 bg-sub/10 text-sub' : 'border-line text-muted'}`}>
+                  #{profile.global_rank}{profile.global_rank <= 10 ? ` · ${tr.board.elite}` : ''}
+                </span>
+              )}
+              {profile.featured_badge && <BadgeChip code={profile.featured_badge} />}
+            </div>
+            <h1 className="handle text-[clamp(2.2rem,6vw,4.2rem)] leading-none break-all">{profile.username}</h1>
+            <p className="flex flex-wrap gap-x-5 gap-y-1 text-muted">
+              {profile.full_name && <span>{profile.full_name}</span>}
+              {profile.country && <span><span aria-hidden="true">{flagEmoji(profile.country)} </span>{countryName(profile.country, locale)}</span>}
+              <span>{t.joined(formatMonth(profile.created_at, tag))}</span>
             </p>
-          )}
-        </div>
-        <div className="flex gap-3">
-          {isMe ? (
-            <Link href="/settings" className="rounded-full border border-line px-5 py-2.5">{t.edit}</Link>
-          ) : (
-            <Link href={`/battles/new?opponent=${profile.username}`} className="rounded-full bg-ink px-5 py-2.5 text-paper">{t.challenge}</Link>
-          )}
+            {profile.bio && <p className="max-w-[62ch]">{profile.bio}</p>}
+            {socials.length > 0 && (
+              <p className="flex flex-wrap gap-2 text-sm">
+                {socials.map(([k, v]) => <a key={k} href={v} rel="noopener noreferrer nofollow" target="_blank" className="rounded-full border border-line px-3 py-1 hover:border-muted">{SOCIALS[k]}</a>)}
+              </p>
+            )}
+          </div>
+          <div className="grid gap-3 md:justify-items-end md:text-right">
+            <div className="grid md:justify-items-end">
+              <span className="label">{t.rating}</span>
+              <span className={`num text-6xl leading-none font-bold ${ring === 'gold' ? 'text-gold' : ''}`}>{profile.elo_rating}</span>
+              <span className="font-mono text-xs text-muted">
+                {n < PROVISIONAL_BATTLES ? t.provisional : profile.peak_elo > profile.elo_rating ? tr.board.peak(profile.peak_elo) : t.rankOf(profile.global_rank, String(total ?? '—'))}
+              </span>
+            </div>
+            {games.length > 0 && <FormStrip games={history.slice(0, 10)} />}
+            {isMe ? (
+              <Link href="/settings" className="rounded-full border border-line px-5 py-2.5 text-center">{t.edit}</Link>
+            ) : (
+              <Link href={`/battles/new?opponent=${profile.username}`} className="rounded-full bg-ink px-6 py-2.5 text-center text-paper">{t.challenge}</Link>
+            )}
+          </div>
         </div>
       </header>
 
-      <dl className="grid grid-cols-2 border-t-2 border-ink md:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value, note, numeric]) => (
-          <div key={label} className="min-w-0 border-b border-line py-4 pr-4">
-            <dt className="text-sm text-muted">{label}</dt>
-            <dd className={numeric ? 'num mt-0.5 text-3xl leading-tight' : 'mt-1.5 text-lg font-semibold break-words'}>{value}</dd>
-            {note && <p className="mt-0.5 text-xs text-muted">{note}</p>}
+          <div key={label} className="grid min-w-0 content-start gap-1 rounded-2xl border border-line bg-gradient-to-b from-surface-2 to-surface p-4">
+            <dt className="label">{label}</dt>
+            <dd className={numeric ? 'num text-3xl leading-tight font-bold' : 'text-lg font-semibold break-words'}>{value}</dd>
+            {note && <p className="text-xs text-muted">{note}</p>}
           </div>
         ))}
       </dl>

@@ -34,29 +34,31 @@ interface Props {
 /** Fraction of each round a voter must actually hear before voting unlocks. */
 const LISTEN_TO_VOTE = 0.5;
 
-function PlayerHeader({ p, align, isWinner, eloDelta }: {
-  p: ProfileSummary | null; align: 'start' | 'end'; isWinner: boolean; eloDelta: number | null;
+function PlayerHeader({ p, align, isWinner, isLoser, eloDelta }: {
+  p: ProfileSummary | null; align: 'start' | 'end'; isWinner: boolean; isLoser: boolean; eloDelta: number | null;
 }) {
   const tb = useI18n().t.battle;
   return (
-    <div className={`grid min-w-0 gap-2 ${align === 'end' ? 'md:justify-items-end md:text-right' : ''}`}>
-      {p && <Avatar username={p.username} url={p.avatar_url} size="lg" ring={isWinner ? 'gold' : 'muted'} />}
-      <h2 className="handle text-[clamp(1.75rem,5vw,3.25rem)] leading-none break-all">
+    <div className={`grid min-w-0 justify-items-center gap-2 text-center transition-opacity ${align === 'end' ? 'md:justify-items-end md:text-right' : 'md:justify-items-start md:text-left'} ${isLoser ? 'opacity-55' : ''}`}>
+      <span className="relative">
+        {isWinner && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-2xl" aria-hidden="true">👑</span>}
+        {p ? <Avatar username={p.username} url={p.avatar_url} size="podium" ring={isWinner ? 'gold' : 'muted'} />
+           : <span className="grid size-16 place-items-center rounded-full border-2 border-dashed border-line text-2xl text-muted sm:size-28 sm:text-4xl" aria-hidden="true">?</span>}
+      </span>
+      <h2 className="handle text-[clamp(1.6rem,4.5vw,3rem)] leading-none break-all">
         {p ? (
-          <Link href={`/beatboxers/${p.username}`} className="underline-offset-4 hover:underline">@{p.username}</Link>
+          <Link href={`/beatboxers/${p.username}`} className="underline-offset-4 hover:underline">{p.username}</Link>
         ) : (
           <span className="text-muted">{tb.openSlot}</span>
         )}
       </h2>
       {p && (
-        <p className="text-muted">
-          <span aria-hidden="true">{flagEmoji(p.country)} </span>
-          <span className="num text-ink">{p.elo_rating}</span> {tb.rating}
-          {p.featured_badge && <span className="ml-2"><BadgeChip code={p.featured_badge} compact /></span>}
-          {eloDelta != null && (
-            <span className={`num ml-2 ${eloDelta >= 0 ? 'text-win' : 'text-loss'}`}>{signed(eloDelta)}</span>
-          )}
-          {isWinner && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-sm text-paper">{tb.winner}</span>}
+        <p className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-muted ${align === 'end' ? 'md:justify-end' : 'md:justify-start'}`}>
+          <span aria-hidden="true">{flagEmoji(p.country)}</span>
+          <span><span className="num text-ink">{p.elo_rating}</span> {tb.rating}</span>
+          {eloDelta != null && <span className={`num ${eloDelta >= 0 ? 'text-win' : 'text-loss'}`}>{signed(eloDelta)}</span>}
+          {p.featured_badge && <BadgeChip code={p.featured_badge} compact />}
+          {isWinner && <span className="rounded-full bg-gold px-2 py-0.5 text-sm font-semibold text-paper">{tb.winner}</span>}
         </p>
       )}
     </div>
@@ -220,12 +222,20 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   return (
     <article className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6">
       <header className="grid gap-6">
-        <div className="grid items-end gap-4 md:grid-cols-[1fr_auto_1fr]">
-          <PlayerHeader p={challenger} align="start" isWinner={battle.winner_id === battle.challenger_id}
-            eloDelta={battle.status === 'finished' ? battle.challenger_elo_delta : null} />
-          <span className="handle text-2xl text-muted md:pb-6" aria-hidden="true">vs</span>
-          <PlayerHeader p={opponent} align="end" isWinner={battle.opponent_id != null && battle.winner_id === battle.opponent_id}
-            eloDelta={battle.status === 'finished' ? battle.opponent_elo_delta : null} />
+        <div className="relative grid items-center gap-4 overflow-hidden rounded-3xl border border-line bg-surface px-5 pt-9 pb-7 sm:gap-6 sm:px-10 sm:pt-10 sm:pb-8 md:grid-cols-[1fr_auto_1fr]">
+          <span className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-gold/12 to-transparent" aria-hidden="true" />
+          <span className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sub/12 to-transparent" aria-hidden="true" />
+          <div className="relative">
+            <PlayerHeader p={challenger} align="start" isWinner={battle.winner_id === battle.challenger_id}
+              isLoser={battle.status === 'finished' && !!battle.winner_id && battle.winner_id !== battle.challenger_id}
+              eloDelta={battle.status === 'finished' ? battle.challenger_elo_delta : null} />
+          </div>
+          <span className="handle relative justify-self-center bg-gradient-to-b from-gold to-sub bg-clip-text text-[clamp(3rem,9vw,6rem)] leading-none text-transparent italic" aria-hidden="true">VS</span>
+          <div className="relative">
+            <PlayerHeader p={opponent} align="end" isWinner={battle.opponent_id != null && battle.winner_id === battle.opponent_id}
+              isLoser={battle.status === 'finished' && !!battle.winner_id && battle.opponent_id != null && battle.winner_id !== battle.opponent_id}
+              eloDelta={battle.status === 'finished' ? battle.opponent_elo_delta : null} />
+          </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 border-y border-line py-3">
           <p className="num text-lg" role="status">{statusLine}</p>
