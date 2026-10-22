@@ -1043,6 +1043,14 @@ export const it: Dict = {
     statusNew: 'Nuovo', statusRead: 'Letto', statusDone: 'Risolto',
     markRead: 'Segna come letto', markDone: 'Segna come risolto', reopen: 'Riapri',
   },
+  story: {
+    featured: 'Storia in evidenza',
+    minRead: (n) => `${n} min di lettura`,
+    by: 'di',
+    readMore: 'Leggi la storia completa',
+    back: 'Torna alla home',
+    englishOnly: 'Testo originale in inglese.',
+  },
   time: {
     today: 'oggi',
     yesterday: 'ieri',

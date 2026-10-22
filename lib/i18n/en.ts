@@ -1047,6 +1047,14 @@ export const en = {
     statusNew: 'New', statusRead: 'Read', statusDone: 'Done',
     markRead: 'Mark read', markDone: 'Mark done', reopen: 'Reopen',
   },
+  story: {
+    featured: 'Featured story',
+    minRead: (n: number) => `${n} min read`,
+    by: 'by',
+    readMore: 'Read the full story',
+    back: 'Back to the home page',
+    englishOnly: '',
+  },
   time: {
     today: 'today',
     yesterday: 'yesterday',
