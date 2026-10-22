@@ -14,7 +14,7 @@ export const en = {
     suspended: 'Your account is suspended: you can browse, but not battle or vote. Contact the moderators if you think this is a mistake.',
   },
   footer: {
-    micCheck: 'Mic check',
+    rules: 'Rules & guide', micCheck: 'Mic check',
     terms: 'Terms',
     privacy: 'Privacy',
     contact: 'Contact',

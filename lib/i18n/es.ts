@@ -15,7 +15,7 @@ export const es: Dict = {
     signUp: 'Registrarse',
     suspended: 'Tu cuenta está suspendida: puedes navegar, pero no batallar ni votar. Escribe a la moderación si crees que es un error.',
   },
-  footer: { micCheck: 'Prueba de micrófono', terms: 'Términos', privacy: 'Privacidad', contact: 'Contacto', language: 'Idioma' },
+  footer: { rules: 'Reglas y guía', micCheck: 'Prueba de micrófono', terms: 'Términos', privacy: 'Privacidad', contact: 'Contacto', language: 'Idioma' },
   home: {
     title: 'Batallas de beatbox 1v1.',
     titleAccent: 'Cada sonido intacto.',
