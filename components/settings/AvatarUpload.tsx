@@ -5,31 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/components/i18n/I18nProvider';
 import Avatar from '@/components/Avatar';
+import { prepareSquareImage } from '@/lib/image';
 
 const BUCKET = 'avatars';
-const OUT = 512; // px, square
-
-/** Centre-crop to a square, scale to 512 px and encode as WebP (JPEG where WebP encoding isn't available). */
-async function prepare(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const sx = (bitmap.width - side) / 2;
-  const sy = (bitmap.height - side) / 2;
-  const canvas = document.createElement('canvas');
-  canvas.width = OUT;
-  canvas.height = OUT;
-  const ctx = canvas.getContext('2d')!;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, OUT, OUT);
-  bitmap.close();
-  const encode = (type: string, q: number) => new Promise<Blob | null>((res) => canvas.toBlob(res, type, q));
-  const webp = await encode('image/webp', 0.86);
-  if (webp && webp.type === 'image/webp') return webp;
-  const jpeg = await encode('image/jpeg', 0.88);
-  if (!jpeg) throw new Error('encode');
-  return jpeg;
-}
-
 export default function AvatarUpload({ userId, username, initialUrl }: { userId: string; username: string; initialUrl: string | null }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -53,8 +31,8 @@ export default function AvatarUpload({ userId, username, initialUrl }: { userId:
     if (file.size > 15 * 1024 * 1024) return setMsg({ ok: false, text: t.tooBig });
     setBusy(true);
     try {
-      const blob = await prepare(file);
-      const path = `${userId}/${crypto.randomUUID()}.${blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
+      const blob = await prepareSquareImage(file, 512);
+      const path = `${userId}/${crypto.randomUUID()}.${blob.type === 'image/webp' ? 'webp' : 'png'}`;
       const { error: up } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: '31536000', upsert: false });
       if (up) throw up;
       const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;

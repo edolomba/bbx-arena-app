@@ -57,8 +57,13 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const { data: group } = event.group_id
+    ? await supabase.from('event_groups').select('id, name, edition, logo_url').eq('id', event.group_id).maybeSingle()
+    : { data: null };
+
   return (
     <EventView
+      group={group}
       matches={(matches ?? []) as MatchRow[]}
       swiss={(swiss ?? []) as SwissRow[]}
       smoke={(smoke ?? []) as SmokeRow[]}

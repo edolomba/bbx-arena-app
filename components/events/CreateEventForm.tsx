@@ -30,11 +30,12 @@ function Seg<T extends string | number | boolean>({ name, legend, value, onChang
 
 const field = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5';
 
-export default function CreateEventForm() {
+export default function CreateEventForm({ groupId }: { groupId: string }) {
   const c = useI18n().t.evNew;
+  const g = useI18n().t.evg;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState('Open');
   const [description, setDescription] = useState('');
   const [maxP, setMaxP] = useState(16);
   const [advance, setAdvance] = useState(8);
@@ -55,13 +56,13 @@ export default function CreateEventForm() {
     setBusy(true);
     setError(null);
     try {
-      const id = await eventRpc(supabase, 'create_event', {
-        p_title: title, p_description: description || null, p_max_participants: maxP, p_advance_count: advance,
+      await eventRpc(supabase, 'create_category', {
+        p_group: groupId, p_category: title, p_audience: description || null, p_max_participants: maxP, p_advance_count: advance,
         p_judges: judges.slice(0, judgeCount).map((j) => j.trim()), p_registration_hours: regHours, p_main_format: mainFormat,
         p_showcase_seconds: showcase, p_battle_round_seconds: roundSec, p_battle_rounds: rounds, p_judge_vote_seconds: voteSec,
         p_ranked: ranked,
       });
-      router.push(`/events/${id}`);
+      router.push(`/events/g/${groupId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : c.failed);
       setBusy(false);
@@ -73,13 +74,21 @@ export default function CreateEventForm() {
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-7">
       <label className="grid gap-1 text-sm">
-        <span className="text-muted">{c.name}</span>
-        <input required minLength={3} maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder={c.namePh} />
+        <span className="text-muted">{g.categoryName}</span>
+        <input required maxLength={40} value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder={g.categoryNamePh} />
       </label>
-      <label className="grid gap-1 text-sm">
-        <span className="text-muted">{c.rules}</span>
-        <textarea rows={4} maxLength={2000} value={description} onChange={(e) => setDescription(e.target.value)} className={field} />
-      </label>
+      <div className="grid gap-2 text-sm">
+        <label className="grid gap-1">
+          <span className="text-muted">{g.audience}</span>
+          <input maxLength={60} value={description} onChange={(e) => setDescription(e.target.value)} className={field} placeholder={g.audiencePh} />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {g.audienceSuggestions.map((a) => (
+            <button key={a} type="button" onClick={() => setDescription(a)}
+              className={`rounded-full border px-3 py-1 ${description === a ? 'border-gold bg-gold/15 text-gold' : 'border-line text-muted hover:text-ink'}`}>{a}</button>
+          ))}
+        </div>
+      </div>
 
       <Seg name="max" legend={c.maxP} value={maxP}
         onChange={(v) => { setMaxP(v); if (advance >= v) setAdvance([4, 8, 16, 32].filter((n) => n < v).pop() ?? 4); }}
@@ -132,7 +141,7 @@ export default function CreateEventForm() {
 
       {error && <p role="alert" className="text-loss">{error}</p>}
       <button disabled={busy} className="justify-self-start rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
-        {busy ? c.creating : c.submit}
+        {busy ? c.creating : g.createCategory}
       </button>
     </form>
   );

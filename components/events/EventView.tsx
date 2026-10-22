@@ -11,6 +11,7 @@ import Countdown from '@/components/Countdown';
 import EventStage from './EventStage';
 import JudgeRanking from './JudgeRanking';
 import StandingsTable from './StandingsTable';
+import EventLogo from './EventLogo';
 import Bracket, { type MatchRow, type SwissRow } from './Bracket';
 import SmokeBoard, { type SmokeRow } from './SmokeBoard';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
@@ -28,11 +29,12 @@ interface Props {
   swiss: SwissRow[];
   smoke: SmokeRow[];
   stage: React.ReactNode;
+  group?: { id: string; name: string; edition: string | null; logo_url: string | null } | null;
 }
 
 const when = (iso: string, locale: Locale) => new Date(iso).toLocaleString(LOCALE_TAG[locale], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId, matches, swiss, smoke, stage }: Props) {
+export default function EventView({ event, judges, entries, showcases, submissions, standings, myRanking, currentUserId, matches, swiss, smoke, stage, group }: Props) {
   const { locale, t: all } = useI18n();
   const t = all.evp;
   const router = useRouter();
@@ -90,6 +92,12 @@ export default function EventView({ event, judges, entries, showcases, submissio
   return (
     <article className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6">
       <header className="grid gap-4">
+        {group && (
+          <Link href={`/events/g/${group.id}`} className="flex items-center gap-3 justify-self-start text-muted hover:text-ink">
+            <EventLogo name={group.name} url={group.logo_url} size="sm" />
+            <span>← {group.name}{group.edition ? ` ${group.edition}` : ''}</span>
+          </Link>
+        )}
         <p className="flex flex-wrap items-center gap-2 text-sm">
           <span className={`rounded-full px-2.5 py-0.5 font-semibold text-paper ${event.status === 'finished' ? 'bg-win' : 'bg-sub'}`}>
             {all.ev.status[event.status]}{event.live ? all.ev.liveNow : ''}
@@ -97,7 +105,8 @@ export default function EventView({ event, judges, entries, showcases, submissio
           <span className="rounded-full border border-line px-2.5 py-0.5 text-muted">{rankedLabel}</span>
           <span className="text-muted">{t.hostedBy} <Link href={`/beatboxers/${event.host?.username}`} className="underline-offset-4 hover:underline">@{event.host?.username}</Link></span>
         </p>
-        <h1 className="handle text-[clamp(2.2rem,6vw,4rem)] leading-none">{event.title}</h1>
+        <h1 className="handle text-[clamp(2.2rem,6vw,4rem)] leading-none">{group && event.category_name ? event.category_name : event.title}</h1>
+        {event.audience && <span className="justify-self-start rounded-full border border-line px-3 py-1 text-sm text-muted">{event.audience}</span>}
         {event.description && <p className="max-w-[68ch] whitespace-pre-wrap">{event.description}</p>}
         <p className="text-sm text-muted">
           {t.summary(event.max_participants, event.advance_count, event.main_format === 'swiss' ? t.toSwiss : event.main_format === 'seven_to_smoke' ? t.toSmoke(event.smoke_target ?? 7) : t.toKnockout)}
