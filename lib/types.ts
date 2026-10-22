@@ -192,7 +192,7 @@ export interface ScoringRules {
 export type NotificationKind =
   | 'challenge_received' | 'challenge_accepted' | 'challenge_declined'
   | 'your_turn' | 'live_soon' | 'voting_open' | 'battle_result'
-  | 'judge_invited' | 'host_invited' | 'event_judge_invited' | 'event_update' | 'badge_earned';
+  | 'judge_invited' | 'host_invited' | 'event_judge_invited' | 'event_update' | 'badge_earned' | 'team_invite' | 'team_update';
 
 export interface AppNotification {
   id: string;
@@ -210,12 +210,14 @@ export interface AppNotification {
     elo_delta?: number | null;
     title?: string;
     their_turn?: boolean;
+    team?: string;
+    team_id?: string;
     badge?: string;
     name?: string;
     username?: string;
     event?: string;
     season?: string;
-    what?: 'eliminations_started' | 'paused' | 'resumed' | 'judging' | 'published';
+    what?: 'eliminations_started' | 'paused' | 'resumed' | 'judging' | 'published' | 'accepted' | 'declined' | 'disbanded';
     next_session_at?: string | null;
   };
   created_at: string;

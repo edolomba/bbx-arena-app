@@ -36,6 +36,10 @@ export function notificationText(n: AppNotification, locale: Locale = 'en', dict
     }
     case 'event_judge_invited':
       return t.eventJudge(who, d.title ?? t.anEvent);
+    case 'team_invite':
+      return t.teamInvite(who, d.team ?? '');
+    case 'team_update':
+      return d.what === 'accepted' ? t.teamAccepted(who, d.team ?? '') : (d.what as string) === 'declined' ? t.teamDeclined(who, d.team ?? '') : t.teamDisbanded(who, d.team ?? '');
     case 'event_update': {
       const title = d.title ?? t.yourEvent;
       if (d.what === 'eliminations_started') return t.eventStarted(title);
@@ -56,6 +60,7 @@ export function notificationText(n: AppNotification, locale: Locale = 'en', dict
 }
 
 /** Where tapping a notification goes. */
-export const notificationHref = (n: { kind?: string; battle_id: string | null; event_id?: string | null; data?: { username?: string } }) =>
+export const notificationHref = (n: { kind?: string; battle_id: string | null; event_id?: string | null; data?: { username?: string; team_id?: string } }) =>
   n.kind === 'badge_earned' && n.data?.username ? `/beatboxers/${n.data.username}#badges`
+    : n.data?.team_id ? `/teams/${n.data.team_id}`
     : n.event_id ? `/events/${n.event_id}` : n.battle_id ? `/battles/${n.battle_id}` : '/notifications';

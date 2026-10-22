@@ -92,3 +92,6 @@ export function intervalHours(interval: string | null | undefined): number {
 }
 
 export const hoursText = (h: number) => (h === 1 ? '1 hour' : `${h} hours`);
+
+/** A record the way the beatbox community writes it: "3-2", or "3-2-1" when there are draws. */
+export const record = (wins: number, losses: number, draws = 0) => (draws > 0 ? `${wins}-${losses}-${draws}` : `${wins}-${losses}`);

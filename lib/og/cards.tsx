@@ -65,8 +65,8 @@ export function BattleCard({ a, b, status, mode }: {
   );
 }
 
-export function ProfileCard({ name, photo, elo, rank, elite, wins, battles, country, badge }: {
-  name: string; photo: string | null; elo: number; rank: number | null; elite: boolean; wins: number; battles: number; country: string | null; badge: string | null;
+export function ProfileCard({ name, photo, elo, rank, elite, wins, losses, draws, battles, country, badge }: {
+  name: string; photo: string | null; elo: number; rank: number | null; elite: boolean; wins: number; losses: number; draws: number; battles: number; country: string | null; badge: string | null;
 }) {
   const ring = rank === 1 ? C.gold : elite ? C.sub : C.line;
   return (
@@ -89,7 +89,7 @@ export function ProfileCard({ name, photo, elo, rank, elite, wins, battles, coun
             {battles > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
                 <div style={{ display: 'flex', fontSize: 20, letterSpacing: 3, color: C.muted }}>RECORD</div>
-                <div style={{ display: 'flex', fontSize: 44, fontWeight: 800 }}>{`${wins}W / ${battles}`}</div>
+                <div style={{ display: 'flex', fontSize: 44, fontWeight: 800 }}>{draws > 0 ? `${wins}-${losses}-${draws}` : `${wins}-${losses}`}</div>
               </div>
             )}
           </div>
