@@ -1062,6 +1062,17 @@ export const en = {
     back: 'Back to the home page',
     englishOnly: '',
   },
+  voice: {
+    micOn: 'Mic on', micOff: 'Mic off', micLocked: 'Muted during the round',
+    talkHint: 'Talk between rounds like in a voice channel. During a round only the battler on stage is heard.',
+    headphones: 'Use headphones: open mics and speakers make echo.',
+    inRoom: 'In the room', listeners: (n: number) => (n === 1 ? '1 listening' : `${n} listening`),
+    roles: { host: 'Host', judge: 'Judge', battler: 'Battler', speaker: 'Guest speaker', audience: 'Audience' } as Record<string, string>,
+    mute: 'Mute', kick: 'Remove', ban: 'Ban', unban: 'Unban', invite: 'Invite to speak', uninvite: 'Stop speaking',
+    banned: 'Banned from this room', confirmBan: (n: string) => `Ban ${n} from this room? They won’t be able to come back.`,
+    removed: 'The host removed you from the room.', hostMuted: 'The host muted your mic.',
+    failed: 'That didn’t work. Try again.', guest: 'Guest',
+  },
   time: {
     today: 'today',
     yesterday: 'yesterday',

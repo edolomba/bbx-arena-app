@@ -1058,6 +1058,17 @@ export const es: Dict = {
     back: 'Volver al inicio',
     englishOnly: 'Texto original en inglés.',
   },
+  voice: {
+    micOn: 'Micro activado', micOff: 'Micro silenciado', micLocked: 'Silenciado durante la ronda',
+    talkHint: 'Habla entre rondas, como en un canal de voz. Durante la ronda solo se oye al battler en el escenario.',
+    headphones: 'Usa auriculares: un micro abierto con altavoces hace eco.',
+    inRoom: 'En la sala', listeners: (n) => (n === 1 ? '1 escuchando' : `${n} escuchando`),
+    roles: { host: 'Host', judge: 'Juez', battler: 'Battler', speaker: 'Invitado', audience: 'Público' },
+    mute: 'Silenciar', kick: 'Expulsar', ban: 'Vetar', unban: 'Quitar veto', invite: 'Invitar a hablar', uninvite: 'Quitar la palabra',
+    banned: 'Vetados en esta sala', confirmBan: (n) => `¿Vetar a ${n} en esta sala? No podrá volver.`,
+    removed: 'El host te ha sacado de la sala.', hostMuted: 'El host ha silenciado tu micro.',
+    failed: 'No funcionó. Inténtalo de nuevo.', guest: 'Visitante',
+  },
   time: {
     today: 'hoy',
     yesterday: 'ayer',
