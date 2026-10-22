@@ -209,6 +209,7 @@ export interface AppNotification {
     forfeited_by_me?: boolean;
     elo_delta?: number | null;
     title?: string;
+    their_turn?: boolean;
     badge?: string;
     name?: string;
     username?: string;

@@ -15,7 +15,7 @@ export function notificationText(n: AppNotification, locale: Locale = 'en', dict
       return d.mode === 'live' ? t.challengeLive(who, when(d.starts_at)) : t.challenge(who);
     case 'challenge_accepted':
       if (d.mode === 'stage') return t.acceptedStage(who, when(d.starts_at));
-      return d.mode === 'live' ? t.acceptedLive(who, when(d.starts_at)) : t.accepted(who);
+      return d.mode === 'live' ? t.acceptedLive(who, when(d.starts_at)) : d.their_turn ? t.acceptedReady(who) : t.accepted(who);
     case 'challenge_declined':
       return t.declined(who);
     case 'your_turn':
