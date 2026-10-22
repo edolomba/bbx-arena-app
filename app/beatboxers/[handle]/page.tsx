@@ -7,8 +7,9 @@ import ReportButton from '@/components/moderation/ReportButton';
 import BadgeChip from '@/components/badges/BadgeChip';
 import BadgeShelf, { type EarnedBadge } from '@/components/badges/BadgeShelf';
 import { Avatar, FormStrip } from '@/components/directory/BeatboxerCard';
+import TeamMembers, { type Member } from '@/components/teams/TeamMembers';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
-import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, signed } from '@/lib/format';
+import { countryName, flagEmoji, formatAgo, formatDate, formatMonth, record, signed } from '@/lib/format';
 import { getT } from '@/lib/i18n/server';
 import { LOCALE_TAG } from '@/lib/i18n/config';
 import type { Dict } from '@/lib/i18n';
@@ -89,13 +90,19 @@ export default async function ProfilePage({ params, searchParams }: {
   const tiles: [string, React.ReactNode, string | null, boolean][] = [
     [t.peak, profile.peak_elo, null, true],
     [t.battles, n, null, true],
-    [t.wld, `${profile.wins}–${profile.losses}–${profile.draws}`, null, true],
+    [t.wld, record(profile.wins, profile.losses, profile.draws), null, true],
     [t.winRate, winPct != null ? `${winPct}%` : '—', null, true],
     [t.currentStreak, streak, null, false],
     [t.forfeits, forfeits, t.missed, true],
     [t.mostFaced, top ? `@${top.username}` : '—', top ? t.facedSummary(top.n, `${top.W}–${top.L}–${top.D}`) : null, false],
   ];
 
+  const { data: teamRows } = await supabase.from('team_members')
+    .select('team:teams!inner(id, name, status, team_members(status, profile:profiles!team_members_profile_id_fkey(username, avatar_url, country)))')
+    .eq('profile_id', profile.id).eq('status', 'active');
+  const teams = ((teamRows ?? []) as unknown as { team: { id: string; name: string; status: string; team_members: { status: string; profile: Member | null }[] } }[])
+    .filter((r) => r.team.status === 'active')
+    .map((r) => ({ id: r.team.id, name: r.team.name, members: r.team.team_members.filter((m) => m.status === 'active' && m.profile).map((m) => m.profile as Member) }));
   const history = [...games].reverse();
   const ring: 'gold' | 'elite' | 'muted' = n === 0 ? 'muted' : profile.global_rank === 1 ? 'gold' : profile.global_rank <= 10 ? 'elite' : 'muted';
   const shown = all ? history : history.slice(0, 15);
@@ -146,6 +153,22 @@ export default async function ProfilePage({ params, searchParams }: {
           </div>
         </div>
       </header>
+
+      {teams.length > 0 && (
+        <section className="grid gap-3">
+          <h2 className="text-xl font-bold [font-stretch:112%]">{tr.teams.onProfile}</h2>
+          <ul className="flex flex-wrap gap-3">
+            {teams.map((tm) => (
+              <li key={tm.id}>
+                <Link href={`/teams/${tm.id}`} className="grid gap-1 rounded-2xl border border-line bg-surface px-4 py-3 hover:border-muted">
+                  <span className="font-bold">{tm.name}</span>
+                  <TeamMembers members={tm.members} size="xs" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value, note, numeric]) => (

@@ -117,6 +117,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             {key === 'rating' ? all.board.tab : t[TABS[key].label as 'week' | 'season' | 'all']}
           </Link>
         ))}
+        <Link href="/teams" className="rounded-full border border-line px-4 py-1.5 text-sm text-muted hover:text-ink">{all.teams.tab}</Link>
       </nav>
 
       {tab === 'rating' ? <RatingBoard /> : (<>

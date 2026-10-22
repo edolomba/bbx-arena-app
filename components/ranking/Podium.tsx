@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { getT } from '@/lib/i18n/server';
-import { countryName, flagEmoji } from '@/lib/format';
+import { countryName, flagEmoji, record } from '@/lib/format';
 import Avatar from '@/components/Avatar';
 
 const MEDAL = ['', '🥇', '🥈', '🥉'];
 
-export interface PodiumRow { rank: number; profile_id: string; username: string; avatar_url: string | null; country: string | null; elo: number; wins: number; battles: number }
+export interface PodiumRow { rank: number; profile_id: string; username: string; avatar_url: string | null; country: string | null; elo: number; wins: number; losses: number; draws: number; battles: number }
 
 /** Top three: 2nd, 1st (raised, gold), 3rd. */
 export default async function Podium({ rows }: { rows: PodiumRow[] }) {
@@ -25,7 +25,7 @@ export default async function Podium({ rows }: { rows: PodiumRow[] }) {
             <span className={`mt-1 max-w-full truncate font-bold ${first ? 'text-lg' : ''}`}>{r.username}</span>
             <span className="text-xs text-muted">{flagEmoji(r.country)} {countryName(r.country, locale)}</span>
             <span className={`num font-bold ${first ? 'text-3xl text-gold sm:text-4xl' : 'text-2xl text-sub'}`}>{r.elo}</span>
-            <span className="font-mono text-[0.7rem] text-muted">{t.battles(r.wins, r.battles)}</span>
+            <span className="font-mono text-sm text-muted">{record(r.wins, r.losses, r.draws)}</span>
             <span className={`mt-3 h-3 w-[90%] rounded-t-lg ${first ? 'h-10 bg-gradient-to-b from-gold to-gold/0' : 'bg-gradient-to-b from-sub/80 to-sub/0'}`} aria-hidden="true" />
           </Link>
         );

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { PROVISIONAL_BATTLES } from '@/lib/constants';
 import BadgeChip from '@/components/badges/BadgeChip';
 import { getT } from '@/lib/i18n/server';
-import { countryName, flagEmoji, formatAgo } from '@/lib/format';
+import { countryName, flagEmoji, formatAgo, record } from '@/lib/format';
 import type { DirectoryEntry, ProfileBattle } from '@/lib/types';
 
 
@@ -57,9 +57,7 @@ export default async function BeatboxerCard({ entry, recent }: { entry: Director
 
       <div className="grid gap-2">
         <p className="num flex gap-4 text-sm">
-          <span><span className="text-win">{entry.wins}</span> {t.won}</span>
-          <span><span className="text-loss">{entry.losses}</span> {t.lost}</span>
-          {entry.draws > 0 && <span>{t.drawn(entry.draws)}</span>}
+          <span className="font-semibold">{record(entry.wins, entry.losses, entry.draws)}</span>
           {winPct != null && <span className="ml-auto text-muted">{t.winRate(winPct)}</span>}
         </p>
         {winPct != null && (

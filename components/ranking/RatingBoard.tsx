@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getT } from '@/lib/i18n/server';
 import Avatar from '@/components/Avatar';
+import { record } from '@/lib/format';
 import BadgeChip from '@/components/badges/BadgeChip';
 import Podium from './Podium';
 
 export interface BoardRow {
   rank: number; profile_id: string; username: string; avatar_url: string | null; country: string | null;
-  featured_badge: string | null; elo: number; peak: number; wins: number; battles: number;
+  featured_badge: string | null; elo: number; peak: number; wins: number; losses: number; draws: number; battles: number;
   last5: string; spark: number[]; last_delta: number | null; upsets: number;
 }
 export interface Fire { profile_id: string; username: string; avatar_url: string | null; gain: number }
@@ -109,7 +110,7 @@ export async function RatingBoardView({ board, onFire, records }: { board: Board
               {r.peak > r.elo && <span> {t.peak(r.peak)}</span>}
             </span>
           </span>
-          <span className="hidden w-20 text-right font-mono text-sm text-muted sm:block">{t.wl(r.wins, r.battles)}</span>
+          <span className="hidden w-20 text-right font-mono text-sm text-muted sm:block">{record(r.wins, r.losses, r.draws)}</span>
         </Link>
       </li>
     );
