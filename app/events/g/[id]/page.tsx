@@ -11,6 +11,17 @@ import LocalSchedule from '@/components/events/LocalSchedule';
 import Avatar from '@/components/Avatar';
 import type { EventGroup, EventRow, EventSession } from '@/lib/types';
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return {};
+  const supabase = await createClient();
+  const { data: g } = await supabase.from('event_groups').select('name, edition, description, organizer').eq('id', id).maybeSingle();
+  if (!g) return {};
+  const title = `${g.name}${g.edition ? ` ${g.edition}` : ''}`;
+  const description = (g.description ?? `Beatbox event${g.organizer ? ` by ${g.organizer}` : ''} on Beatbox Arena.`).slice(0, 200);
+  return { title, description, openGraph: { title, description }, twitter: { title, description } };
+}
+
 export const dynamic = 'force-dynamic';
 
 export default async function EventGroupPage({ params }: { params: Promise<{ id: string }> }) {

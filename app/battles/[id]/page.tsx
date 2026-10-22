@@ -3,6 +3,23 @@ import { createClient } from '@/lib/supabase/server';
 import BattleView from '@/components/battle/BattleView';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, Submission, Vote } from '@/lib/types';
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return {};
+  const supabase = await createClient();
+  const { data: b } = await supabase.from('battles')
+    .select('status, mode, challenger:profiles!battles_challenger_id_fkey(username), opponent:profiles!battles_opponent_id_fkey(username)')
+    .eq('id', id).maybeSingle();
+  if (!b) return {};
+  const a = (b.challenger as unknown as { username: string } | null)?.username;
+  const o = (b.opponent as unknown as { username: string } | null)?.username;
+  const title = o ? `@${a} vs @${o}` : `@${a}: open challenge`;
+  const description = b.status === 'voting' ? 'Listen to both rounds and vote on Beatbox Arena.'
+    : b.status === 'open' ? 'Open beatbox battle: anyone can take it on Beatbox Arena.'
+    : `${b.mode === 'stage' ? 'Live stage battle' : 'Beatbox battle'} on Beatbox Arena.`;
+  return { title, description, openGraph: { title, description }, twitter: { title, description } };
+}
+
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 
 export const dynamic = 'force-dynamic';

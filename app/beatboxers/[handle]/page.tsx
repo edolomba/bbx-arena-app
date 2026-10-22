@@ -14,6 +14,19 @@ import { LOCALE_TAG } from '@/lib/i18n/config';
 import type { Dict } from '@/lib/i18n';
 import type { BattleWithPlayers, DirectoryEntry, ProfileBattle } from '@/lib/types';
 
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }) {
+  const { handle } = await params;
+  const supabase = await createClient();
+  const { data: p } = await supabase.from('directory_entries').select('username, elo_rating, wins, battles_count, global_rank')
+    .ilike('username', decodeURIComponent(handle).replace(/[%_]/g, '')).maybeSingle();
+  if (!p) return {};
+  const title = `@${p.username}`;
+  const description = p.battles_count > 0
+    ? `Rating ${p.elo_rating} · #${p.global_rank} · ${p.wins} wins in ${p.battles_count} battles on Beatbox Arena.`
+    : `Beatboxer on Beatbox Arena. Challenge @${p.username} to a battle.`;
+  return { title, description, openGraph: { title, description }, twitter: { title, description } };
+}
+
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
 const resultText = (g: ProfileBattle, t: Dict['profile']) => {
   const o = { W: t.won, L: t.lost, D: t.drew }[g.outcome];
