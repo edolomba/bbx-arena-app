@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import BattleRow from '@/components/battle/BattleRow';
 import { flagEmoji } from '@/lib/format';
 import BadgeChip from '@/components/badges/BadgeChip';
+import BetaNotice from '@/components/feedback/BetaNotice';
 import { getT } from '@/lib/i18n/server';
 import type { BattleWithPlayers, DirectoryEntry } from '@/lib/types';
 
@@ -40,6 +41,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto grid max-w-6xl gap-14 px-4 py-12 sm:px-6">
+      <BetaNotice />
       <section className="grid gap-5">
         <h1 className="handle max-w-[14ch] text-[clamp(2.75rem,8vw,6rem)] leading-[0.95]">
           {t.home.title}{' '}

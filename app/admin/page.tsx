@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AdminActions from '@/components/moderation/AdminActions';
 import EventApproval from '@/components/moderation/EventApproval';
+import FeedbackList, { type FeedbackItem } from '@/components/moderation/FeedbackList';
 import { getT } from '@/lib/i18n/server';
 import { formatAgo } from '@/lib/format';
 
@@ -49,12 +50,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     .order('created_at', { ascending: !showOpen })
     .limit(100);
   const reports = (data ?? []) as unknown as ReportRow[];
+  const { data: feedback } = await supabase.from('feedback').select('*, author:profiles!feedback_profile_id_fkey(username)')
+    .order('created_at', { ascending: false }).limit(60);
   const { data: pending } = await supabase.from('events').select('id, title, max_participants, host:profiles!events_host_id_fkey(username)')
     .eq('ranked', true).is('approved_at', null).neq('status', 'cancelled').order('created_at');
 
   return (
     <main className="mx-auto grid max-w-4xl gap-6 px-4 py-10 sm:px-6">
       <h1 className="handle text-[clamp(2.2rem,6vw,3.6rem)] leading-none">{t.title}</h1>
+      <section className="grid gap-3">
+        <h2 className="text-xl font-bold [font-stretch:112%]">{tr.beta.adminTitle}</h2>
+        <FeedbackList items={(feedback ?? []) as unknown as FeedbackItem[]} />
+      </section>
       <section className="grid gap-3">
         <h2 className="text-xl font-bold [font-stretch:112%]">{t.pending}</h2>
         <EventApproval events={((pending ?? []) as unknown as { id: string; title: string; max_participants: number; host: { username: string } | null }[])

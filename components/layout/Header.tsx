@@ -33,6 +33,9 @@ export default async function Header() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Beatbox Arena" width={142} height={36} className="h-8 w-auto sm:h-9" />
         </Link>
+        <Link href="/feedback" title={t.beta.title} className="-ml-2 mr-1 rounded border border-gold/50 bg-gold/10 px-1.5 py-px font-mono text-[0.6rem] tracking-widest text-gold uppercase hover:bg-gold/20">
+          {t.beta.chip}
+        </Link>
         <nav aria-label="Sections" className="hidden min-w-0 gap-1 text-sm md:flex">{sections}</nav>
         <div className="ml-auto flex items-center gap-2 text-sm">
           {user ? (

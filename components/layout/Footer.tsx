@@ -11,6 +11,7 @@ export default async function Footer() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="Beatbox Arena" width={95} height={24} className="h-6 w-auto opacity-90" />
         <Link href="/mic-check" className="hover:text-ink">{t.footer.micCheck}</Link>
+        <Link href="/feedback" className="hover:text-ink">{t.beta.pageTitle}</Link>
         <Link href="/terms" className="hover:text-ink">{t.footer.terms}</Link>
         <Link href="/privacy" className="hover:text-ink">{t.footer.privacy}</Link>
         {contact && <a href={`mailto:${contact}`} className="hover:text-ink">{t.footer.contact}</a>}
