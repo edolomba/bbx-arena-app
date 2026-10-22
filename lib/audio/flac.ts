@@ -232,19 +232,24 @@ function writeSubframe(w: BitWriter, x: Int32Array, bps: number, plan: Plan) {
 // ---------------------------------------------------------------------------
 // Frames and stream
 // ---------------------------------------------------------------------------
+/**
+ * Frame number in FLAC's UTF-8-like coding: 1 byte below 128, then 2 bytes
+ * (11 bits), 3 (16), 4 (21), 5 (26), 6 (31) or 7 bytes (36 bits).
+ */
 function utf8Number(w: BitWriter, n: number) {
   if (n < 0x80) { w.write(n, 8); return; }
-  const bytes: number[] = [];
-  let lead = 0xc0, max = 0x1f;
+  const bits = Math.floor(Math.log2(n)) + 1;
+  let count = 2;
+  while (count < 7 && bits > 5 * count + 1) count++;
+  const tail: number[] = [];
   let v = n;
-  while (v > max) {
-    bytes.unshift(0x80 | (v & 0x3f));
+  for (let i = 0; i < count - 1; i++) {
+    tail.unshift(0x80 | (v % 64));
     v = Math.floor(v / 64);
-    lead = 0x80 | (lead >> 1);
-    max >>= 1;
   }
-  bytes.unshift(lead | v);
-  for (const b of bytes) w.write(b, 8);
+  const lead = (0xff << (8 - count)) & 0xff;
+  w.write(lead | v, 8);
+  for (const b of tail) w.write(b, 8);
 }
 
 /** Quantise float samples to signed integers exactly like encodeWav (with the same 16-bit dither). */
