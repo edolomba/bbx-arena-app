@@ -237,6 +237,9 @@ export interface EventRow {
   advance_count: number;
   main_format: 'knockout' | 'swiss' | 'seven_to_smoke';
   smoke_target?: number;
+  group_id?: string | null;
+  category_name?: string | null;
+  audience?: string | null;
   judge_count: number;
   showcase_seconds: number;
   battle_round_seconds: number;
@@ -285,4 +288,27 @@ export interface StandingRow {
   firsts: number;
   place: number;
   tied: boolean;
+}
+
+export interface EventGroup {
+  id: string;
+  host_id: string;
+  name: string;
+  edition: string | null;
+  organizer: string | null;
+  description: string | null;
+  logo_url: string | null;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+  host?: { username: string } | null;
+}
+
+export interface EventSession {
+  id: string;
+  group_id: string;
+  title: string;
+  category_id: string | null;
+  starts_at: string;
+  ends_at: string;
 }
