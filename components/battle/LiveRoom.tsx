@@ -280,7 +280,7 @@ export default function LiveRoom({ battle, submissions, currentUserId, onHeard }
         {phase === 'lobby' && <p className="text-sm text-muted">{tl.roundsIn(battle.turn_number)}</p>}
       </section>
 
-      {phase === 'lobby' && isParticipant && !mySubmitted && (
+      {phase === 'lobby' && isParticipant && !mySubmitted && battle.format !== 'tag' && (
         <section className="grid gap-3">
           <h2 className="text-xl font-bold [font-stretch:112%]">{tl.yourRound}</h2>
           <p>{tl.getItIn}</p>

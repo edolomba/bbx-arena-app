@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectionState, LocalAudioTrack, Room, RoomEvent, Track, type RemoteParticipant, type RemoteTrack } from 'livekit-client';
 import { createClient } from '@/lib/supabase/client';
 import { castVote, stageRpc, submitTake } from '@/lib/supabase/battles';
+import { submitTagPart } from '@/lib/supabase/tag';
+import { mixTakes } from '@/lib/audio/mixdown';
+import { audioUrl } from '@/lib/supabase/storage';
+import type { PreparedTake } from '@/lib/types';
 import { getPlaybackContext } from '@/lib/audio/playback-bus';
 import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
@@ -40,13 +44,22 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
 
   const A = battle.challenger_id;
   const B = battle.opponent_id ?? '';
-  const names: Record<string, string> = { [A]: battle.challenger.username, [B]: battle.opponent?.username ?? '' };
+  // Tag Team: a side is two people (captain + partner) and is named after the team
+  const isTag = battle.format === 'tag';
+  const team = (cap: string): string[] => (isTag ? [cap, cap === A ? battle.challenger_partner_id : battle.opponent_partner_id].filter((x): x is string => !!x) : [cap]);
+  const sideOf = (uid: string | null) => (!uid ? null : team(A).includes(uid) ? A : B && team(B).includes(uid) ? B : null);
+  const sideName = (cap: string, solo: string, partner?: { username: string } | null, teamName?: string | null) =>
+    isTag ? teamName ?? [solo, partner?.username].filter(Boolean).join(' & ') : solo;
+  const names: Record<string, string> = {
+    [A]: sideName(A, battle.challenger.username, battle.challenger_partner, battle.challenger_team?.name),
+    [B]: sideName(B, battle.opponent?.username ?? '', battle.opponent_partner, battle.opponent_team?.name),
+  };
   const totalSlots = 2 * battle.rounds_per_player;
   const slotUser = (slot: number) => (slot % 2 === 0 ? A : B);
   const slotRound = (slot: number) => Math.floor(slot / 2) + 1;
 
   const isHost = !!currentUserId && currentUserId === battle.host_id;
-  const isPerformer = !!currentUserId && (currentUserId === A || currentUserId === B);
+  const isPerformer = !!currentUserId && sideOf(currentUserId) !== null;
   const activeJudges = judges.filter((j) => j.active);
   const isJudge = !!currentUserId && activeJudges.some((j) => j.judge_id === currentUserId);
   const judged = (battle.judge_count ?? 0) > 0;
@@ -174,7 +187,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
   const audibleUser = inRoundPhase && t >= roundStart && t < roundEnd + STAGE_LISTEN_GRACE_MS ? slotUser(slot!) : null;
   const roundWindow = inRoundPhase && t < roundEnd + STAGE_LISTEN_GRACE_MS;
   const performerNow = inRoundPhase ? slotUser(slot!) : null;
-  const myTurn = !!performerNow && performerNow === currentUserId;
+  const myTurn = !!performerNow && sideOf(currentUserId) === performerNow;
   const roundsDone = slot !== null && (phase !== 'round' || t >= roundEnd) ? slot + 1 : slot ?? 0;
   const nextSlot = slot === null ? 0 : slot + 1;
   const votingLeft = phase === 'voting' ? roundEnd - t : 0;
@@ -183,7 +196,7 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
   useEffect(() => {
     audioEls.current.forEach((el, identity) => {
       // Outside a round everyone who talks is heard; during a round, only the battler on stage.
-      el.muted = roundWindow ? identity !== audibleUser : false;
+      el.muted = roundWindow ? !(audibleUser && team(audibleUser).includes(identity)) : false;
     });
   });
 
@@ -199,6 +212,37 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
     }, 250);
     return () => window.clearInterval(iv);
   });
+
+  /**
+   * Tag Team on stage: each member uploads their own take; one of them (always the
+   * same, picked by id) waits for the partner's take, mixes both from the round's
+   * start and submits the team round. If the mixer drops out, the other member
+   * submits their own take after two minutes so the team never ends up empty.
+   */
+  async function submitTagStageTake(take: PreparedTake, round: number) {
+    if (!currentUserId) return;
+    const cap = sideOf(currentUserId)!;
+    await submitTagPart(supabase, battle.id, currentUserId, take);
+    const mates = team(cap);
+    const partnerId = mates.find((m) => m !== currentUserId) ?? null;
+    const mixer = [...mates].sort()[0] === currentUserId;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const teamRoundIn = async () => ((await supabase.from('submissions').select('id', { count: 'exact', head: true })
+      .eq('battle_id', battle.id).eq('user_id', cap).eq('round_number', round)).count ?? 0) > 0;
+    if (mixer) {
+      let partnerBlob: Blob | null = null;
+      for (let i = 0; i < 30 && partnerId && !partnerBlob; i++) {
+        const { data } = await supabase.from('tag_parts').select('audio_path').eq('battle_id', battle.id)
+          .eq('side_captain', cap).eq('round_number', round).eq('profile_id', partnerId).maybeSingle();
+        if (data) partnerBlob = await (await fetch(audioUrl(data.audio_path))).blob();
+        else await wait(3000);
+      }
+      await submitTake(supabase, battle.id, currentUserId, partnerBlob ? await mixTakes([take.blob, partnerBlob]) : take);
+    } else {
+      for (let i = 0; i < 40; i++) { if (await teamRoundIn()) return; await wait(3000); }
+      if (!(await teamRoundIn())) await submitTake(supabase, battle.id, currentUserId, take);
+    }
+  }
 
   // Performer: mic open and recording exactly while their round runs.
   useEffect(() => {
@@ -226,7 +270,8 @@ export default function StageRoom({ battle, judges, votes, currentUserId, onHear
         rec.reset();
         setUploads((u) => u.map((x) => (x.round === round ? { ...x, state: 'uploading' } : x)));
         try {
-          await submitTake(supabase, battle.id, currentUserId, take);
+          if (isTag) await submitTagStageTake(take, round);
+          else await submitTake(supabase, battle.id, currentUserId, take);
           setUploads((u) => u.map((x) => (x.round === round ? { ...x, state: 'done' } : x)));
         } catch (err) {
           setUploads((u) => u.map((x) => (x.round === round ? { ...x, state: 'failed', message: err instanceof Error ? err.message : '' } : x)));

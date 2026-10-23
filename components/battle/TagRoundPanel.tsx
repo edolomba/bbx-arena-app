@@ -20,14 +20,20 @@ export default function TagRoundPanel({ battle, userId }: { battle: BattleWithPl
   const partnerName = captain === battle.challenger_id
     ? [battle.challenger, battle.challenger_partner].find((p) => p && p.id !== userId)?.username
     : [battle.opponent, battle.opponent_partner].find((p) => p && p.id !== userId)?.username;
-  const round = Math.floor(battle.turn_number / 2) + 1;
+  const live = battle.mode === 'live';
+  const round = live ? 1 : Math.floor(battle.turn_number / 2) + 1;
+  const [teamDone, setTeamDone] = useState(false);
   const [part, setPart] = useState<TagPart | null | undefined>(undefined);
   const [redo, setRedo] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('tag_parts').select('*').eq('battle_id', battle.id).eq('side_captain', captain).eq('round_number', round).maybeSingle();
     setPart((data as TagPart) ?? null);
-  }, [supabase, battle.id, captain, round]);
+    if (live) {
+      const { count } = await supabase.from('submissions').select('id', { count: 'exact', head: true }).eq('battle_id', battle.id).eq('user_id', captain);
+      setTeamDone((count ?? 0) > 0);
+    }
+  }, [supabase, battle.id, captain, round, live]);
   useEffect(() => { void load(); }, [load]);
   // the partner may record while this page is open
   useEffect(() => {
@@ -37,7 +43,9 @@ export default function TagRoundPanel({ battle, userId }: { battle: BattleWithPl
     return () => { void supabase.removeChannel(ch); };
   }, [supabase, battle.id, load]);
 
-  if (battle.current_turn_user_id !== captain) return <p className="text-muted">{t.otherTeamTurn}</p>;
+  if (!live && battle.current_turn_user_id !== captain) return <p className="text-muted">{t.otherTeamTurn}</p>;
+  if (live && battle.starts_at && Date.now() >= new Date(battle.starts_at).getTime()) return null;
+  if (teamDone) return <p className="rounded-2xl border border-win/40 bg-win/5 p-4 text-win">{t.teamRoundIn}</p>;
   if (part === undefined) return null;
 
   async function sendPart(take: PreparedTake) {
@@ -47,6 +55,7 @@ export default function TagRoundPanel({ battle, userId }: { battle: BattleWithPl
   }
   async function sendMix(take: PreparedTake) {
     await submitTake(supabase, battle.id, userId, take);
+    if (live) setTeamDone(true);
     router.refresh();
   }
 

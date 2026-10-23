@@ -249,7 +249,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
         </div>
 
         {isTag && <TagAccept battle={battle} viewerId={currentUserId} />}
-        {isTag && battle.status === 'active' && currentUserId && ([battle.challenger_id, battle.opponent_id].includes(currentUserId) || tagSeated) && (
+        {isTag && battle.mode !== 'stage' && battle.status === 'active' && currentUserId && ([battle.challenger_id, battle.opponent_id].includes(currentUserId) || tagSeated) && (
           <TagRoundPanel battle={battle} userId={currentUserId} />
         )}
         {(canAccept || canDecline || (inviteUrl && (battle.status === 'open' || battle.status === 'pending'))) && (

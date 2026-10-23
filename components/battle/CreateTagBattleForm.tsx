@@ -26,6 +26,10 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
   const [rounds, setRounds] = useState(1);
   const [voting, setVoting] = useState(24);
   const [ranked, setRanked] = useState(true);
+  const [mode, setMode] = useState<'async' | 'live' | 'stage'>('async');
+  const [startsIn, setStartsIn] = useState(60);
+  const [host, setHost] = useState('');
+  const [judgeList, setJudgeList] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,12 +49,20 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
     setBusy(true);
     setError('');
     try {
-      const id = await rpcOrThrow(supabase, 'create_tag_battle', {
+      const sides = {
         p_team: mine === 'team' ? team || null : null,
         p_partner: mine === 'casual' ? partner || null : null,
         p_opponent_team: against === 'team' ? oppTeam || null : null,
-        p_round_duration: duration, p_rounds: rounds, p_voting_hours: voting, p_ranked: ranked,
-      });
+      };
+      const judges = judgeList.split(/[\s,]+/).map((j) => j.replace(/^@/, '')).filter(Boolean);
+      const id = mode === 'async'
+        ? await rpcOrThrow(supabase, 'create_tag_battle', { ...sides, p_round_duration: duration, p_rounds: rounds, p_voting_hours: voting, p_ranked: ranked })
+        : await rpcOrThrow(supabase, 'create_tag_battle_live', {
+            ...sides, p_mode: mode, p_starts_in_minutes: startsIn, p_round_duration: duration,
+            p_rounds: mode === 'live' ? 1 : rounds, p_voting_hours: voting,
+            p_host_username: mode === 'stage' ? host || null : null,
+            p_judges: mode === 'stage' && judges.length ? judges : null,
+          });
       router.push(`/battles/${id}`);
     } catch (err) {
       setError((err as Error).message);
@@ -64,7 +76,17 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
 
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-7">
-      <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted">{t.onlyTurns}</p>
+      <fieldset className="grid gap-3">
+        <legend className="mb-2 font-semibold">{t.format}</legend>
+        <div className="flex flex-wrap gap-2">
+          {(['async', 'live', 'stage'] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setMode(m)} className={pill(mode === m)}>
+              {m === 'async' ? all.create.asyncTitle : m === 'live' ? all.create.liveTitle : all.create.stageTitle}
+            </button>
+          ))}
+        </div>
+        <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted">{mode === 'stage' ? t.stageNote : mode === 'live' ? t.liveNote : t.onlyTurns}</p>
+      </fieldset>
 
       <fieldset className="grid gap-3">
         <legend className="mb-2 font-semibold">{t.mySide}</legend>
@@ -111,10 +133,25 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
             {[1, 12, 24].map((h) => <option key={h} value={h}>{h} h</option>)}
           </select></label>
       </div>
-      <label className="flex items-center gap-3">
+      {mode !== 'async' && (
+        <label className="grid gap-1 text-sm"><span className="text-muted">{all.create.starts}</span>
+          <select value={startsIn} onChange={(e) => setStartsIn(Number(e.target.value))} className={field}>
+            {[[15, all.create.in15], [60, all.create.in60], [360, all.create.in360], [1440, all.create.in1440]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select></label>
+      )}
+      {mode === 'stage' && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm"><span className="text-muted">{all.create.host}</span>
+            <input value={host} onChange={(e) => setHost(e.target.value)} placeholder={t.hostPh} className={field} autoCapitalize="none" autoCorrect="off" /></label>
+          <label className="grid gap-1 text-sm"><span className="text-muted">{all.create.judges}</span>
+            <input value={judgeList} onChange={(e) => setJudgeList(e.target.value)} placeholder={t.judgesPh} className={field} autoCapitalize="none" autoCorrect="off" /></label>
+          <p className="text-xs text-muted sm:col-span-2">{all.create.iHostNote}</p>
+        </div>
+      )}
+      {mode === 'async' && <label className="flex items-center gap-3">
         <input type="checkbox" checked={ranked} onChange={(e) => setRanked(e.target.checked)} className="size-4 accent-[var(--gold)]" />
         <span>Ranked</span>
-      </label>
+      </label>}
 
       {error && <p role="alert" className="text-loss">{error}</p>}
       <button disabled={busy || (against === 'team' && !oppTeam) || (mine === 'team' && !team)} className="justify-self-start rounded-full bg-ink px-6 py-3 text-paper disabled:opacity-60">
