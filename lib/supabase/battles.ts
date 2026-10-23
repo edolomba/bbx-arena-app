@@ -64,6 +64,7 @@ export interface NewBattle {
   mode: 'async' | 'live' | 'stage';
   votingHours: number;
   startsInMinutes: number | null;
+  responseHours?: number;
   rounds?: number;
   host?: string;
   judges?: string[];
@@ -78,6 +79,7 @@ export async function createBattle(supabase: SupabaseClient, b: NewBattle): Prom
     p_mode: b.mode,
     p_voting_hours: b.votingHours,
     p_starts_in_minutes: b.mode === 'async' ? null : b.startsInMinutes,
+    p_response_hours: b.mode === 'async' ? b.responseHours ?? 24 : 24,
     p_rounds_per_player: b.rounds ?? 1,
     p_host_username: b.mode === 'stage' ? b.host?.trim() || null : null,
     p_judges: b.mode === 'stage' && b.judges?.length ? b.judges.map((j) => j.trim()) : null,
