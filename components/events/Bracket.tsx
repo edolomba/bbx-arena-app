@@ -69,7 +69,7 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
     const ready = !!m.a_id && !!m.b_id;
     const side = (id: string | null) => (
       <span className={`flex items-center justify-between gap-2 px-3 py-1.5 ${decided && m.winner_id === id ? 'font-bold' : decided ? 'text-muted line-through decoration-1' : ''}`}>
-        <span className="truncate">{id ? `@${names[id] ?? '?'}` : t.tbd}</span>
+        <span className="truncate">{id ? names[id] ?? '?' : t.tbd}</span>
         {decided && m.winner_id === id && <span className="text-xs text-win">{m.walkover ? t.wo : t.won}</span>}
       </span>
     );
@@ -91,7 +91,7 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
               <span className="flex flex-wrap gap-1">
                 {t.walkoverTo}
                 {[m.a_id!, m.b_id!].map((id) => (
-                  <button key={id} disabled={busy} onClick={() => act('host_award_match', { p_match: m.id, p_winner: id })} className="underline underline-offset-4">@{names[id]}</button>
+                  <button key={id} disabled={busy} onClick={() => act('host_award_match', { p_match: m.id, p_winner: id })} className="underline underline-offset-4">{names[id]}</button>
                 ))}
                 <button onClick={() => setWoFor(null)} className="text-muted">{t.cancel}</button>
               </span>
@@ -129,7 +129,7 @@ export default function Bracket({ eventId, isHost, live, mainFormat, matches, sw
                 {swiss.map((s) => (
                   <li key={s.profile_id} className={`grid grid-cols-[1.5rem_1fr_auto_auto] gap-3 border-b py-1.5 ${s.pos === 4 ? 'border-b-2 border-sub' : 'border-line'}`}>
                     <span className="num text-muted">{s.pos}</span>
-                    <span className="truncate">@{names[s.profile_id]}</span>
+                    <span className="truncate">{names[s.profile_id]}</span>
                     <span className="num">{t.wins(s.wins)}</span>
                     <span className="num text-muted">{s.buchholz}</span>
                   </li>

@@ -8,6 +8,11 @@ import { getPlaybackContext } from '@/lib/audio/playback-bus';
 import { useServerClock } from '@/hooks/useServerClock';
 import { useHiFiRecorder } from '@/hooks/useHiFiRecorder';
 import VoiceControls, { type RoomRole } from '@/components/live/VoiceControls';
+import { entryLabel, entryMembers } from '@/lib/events';
+import { mixTakes } from '@/lib/audio/mixdown';
+import { audioUrl } from '@/lib/supabase/storage';
+import { submitShowcasePart } from '@/lib/supabase/events';
+import type { PreparedTake } from '@/lib/types';
 import { STAGE_LISTEN_GRACE_MS, STAGE_PUBLISH } from '@/lib/live/stage';
 import { formatClock, formatTime } from '@/lib/format';
 import { useI18n } from '@/components/i18n/I18nProvider';
@@ -38,9 +43,9 @@ export default function EventStage({ event, entries, performedIds, currentUserId
   const rec = useHiFiRecorder({ maxSeconds: event.showcase_seconds });
 
   const isHost = currentUserId === event.host_id;
-  const myEntry = entries.find((e) => e.profile_id === currentUserId && e.status === 'registered');
+  const myEntry = entries.find((e) => (e.profile_id === currentUserId || (!!currentUserId && e.partner_id === currentUserId)) && e.status === 'registered');
   const isPerformer = !!myEntry;
-  const names = Object.fromEntries(entries.map((e) => [e.profile_id, e.profile?.username ?? 'beatboxer']));
+  const names = Object.fromEntries(entries.map((e) => [e.profile_id, entryLabel(e)]));
   const order = entries.filter((e) => e.status === 'registered').sort((a, b) => (a.stage_order ?? 0) - (b.stage_order ?? 0));
 
   const [, setTick] = useState(0);
@@ -143,12 +148,12 @@ export default function EventStage({ event, entries, performedIds, currentUserId
   const performing = !!onStage && t >= start && t < end;
   const audible = !!onStage && t >= start && t < end + STAGE_LISTEN_GRACE_MS ? onStage : null;
   const roundWindow = !!onStage && t < end + STAGE_LISTEN_GRACE_MS;
-  const myTurn = onStage === currentUserId;
+  const myTurn = !!onStage && entryMembers(entries, onStage).includes(currentUserId ?? '');
   const nextUp = order.find((e) => !performedIds.includes(e.profile_id) && e.profile_id !== onStage);
 
   useEffect(() => {
     // Outside a showcase everyone who talks is heard; during one, only the beatboxer on stage.
-    audioEls.current.forEach((el, id) => { el.muted = roundWindow ? id !== audible : false; });
+    audioEls.current.forEach((el, id) => { el.muted = roundWindow ? !(audible && entryMembers(entries, audible).includes(id)) : false; });
   });
 
   // Performer: mic open and recording exactly during their showcase.
@@ -170,7 +175,8 @@ export default function EventStage({ event, entries, performedIds, currentUserId
         rec.reset();
         setUpload(ts.uploading);
         try {
-          await submitShowcase(supabase, event.id, currentUserId, take);
+          if (event.kind === 'tag') await submitTagShowcase(take);
+          else await submitShowcase(supabase, event.id, currentUserId, take);
           setUpload(ts.saved);
         } catch (err) {
           setUpload(ts.failed(err instanceof Error ? err.message : ''));
@@ -178,6 +184,38 @@ export default function EventStage({ event, entries, performedIds, currentUserId
       })();
     }
   });
+
+  /**
+   * Tag Team showcase: each member uploads their own take; one of them (always the
+   * same, picked by id) mixes both and submits the team's showcase. If the mixer
+   * drops out, the other member submits their own take after two minutes.
+   */
+  async function submitTagShowcase(take: PreparedTake) {
+    if (!currentUserId || !myEntry) return;
+    const owner = myEntry.profile_id;
+    const startedAt = event.stage_started_at;
+    await submitShowcasePart(supabase, event.id, currentUserId, take);
+    const mates = entryMembers(entries, owner);
+    const partnerId = mates.find((m) => m !== currentUserId) ?? null;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const showcaseIn = async () => {
+      const { data } = await supabase.from('event_showcases').select('submitted_at').eq('event_id', event.id).eq('profile_id', owner).maybeSingle();
+      return !!data && (!startedAt || new Date(data.submitted_at) >= new Date(startedAt));
+    };
+    if ([...mates].sort()[0] === currentUserId) {
+      let partnerBlob: Blob | null = null;
+      for (let i = 0; i < 30 && partnerId && !partnerBlob; i++) {
+        const { data } = await supabase.from('event_showcase_parts').select('audio_path, created_at').eq('event_id', event.id)
+          .eq('entry_profile', owner).eq('profile_id', partnerId).maybeSingle();
+        if (data && (!startedAt || new Date(data.created_at) >= new Date(startedAt))) partnerBlob = await (await fetch(audioUrl(data.audio_path))).blob();
+        else await wait(3000);
+      }
+      await submitShowcase(supabase, event.id, currentUserId, partnerBlob ? await mixTakes([take.blob, partnerBlob]) : take);
+    } else {
+      for (let i = 0; i < 40; i++) { if (await showcaseIn()) return; await wait(3000); }
+      if (!(await showcaseIn())) await submitShowcase(supabase, event.id, currentUserId, take);
+    }
+  }
 
   // Level bar for whoever is on stage (or your own mic before your turn).
   const getLevels = rec.getLevels;
@@ -247,7 +285,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
           ) : (
             <>
               <p className="text-lg text-muted">{tv.nowPerforming}</p>
-              <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">@{names[onStage!]}</h2>
+              <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">{names[onStage!]}</h2>
               <p className="num text-muted">{formatTime((t - start) / 1000)} / {formatTime((end - start) / 1000)}</p>
             </>
           )
@@ -256,7 +294,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
           <>
             <p className="text-lg text-muted">{event.live ? (nextUp ? ts.nextUp : tv.everyoneDone) : tv.paused}</p>
             <h2 className="handle text-[clamp(2rem,6vw,3.6rem)] leading-none">
-              {event.live ? (nextUp ? `@${names[nextUp.profile_id]}` : tv.judgesNext) : tv.seeYou}
+              {event.live ? (nextUp ? names[nextUp.profile_id] : tv.judgesNext) : tv.seeYou}
             </h2>
           </>
         )}
@@ -332,7 +370,7 @@ export default function EventStage({ event, entries, performedIds, currentUserId
             return (
               <li key={e.profile_id} className={`grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-b border-line py-2.5 ${live ? 'text-sub' : ''}`}>
                 <span className="num text-muted">{i + 1}</span>
-                <span>@{e.profile?.username}</span>
+                <span>{entryLabel(e)}</span>
                 <span className="flex items-center gap-3 text-sm text-muted">
                   {live ? ts.onNow : done ? ts.done : ''}
                   {isHost && event.live && (done || e.profile_id === onStage) && !counting && !performing && (

@@ -41,7 +41,7 @@ export default function StandingsTable({ rows, names, advanceCount }: {
               <tr key={r.profile_id} className={`border-b ${i + 1 === advanceCount ? 'border-b-2 border-sub' : 'border-line'}`}>
                 <td className={`num py-2.5 pr-3 text-right text-xl ${qualified ? '' : 'text-muted'}`}>{r.place}</td>
                 <td className="py-2.5 pr-3">
-                  <Link href={`/beatboxers/${names[r.profile_id]}`} className="underline-offset-4 hover:underline">@{names[r.profile_id]}</Link>
+                  {names[r.profile_id]?.startsWith('@') ? <Link href={`/beatboxers/${names[r.profile_id].slice(1)}`} className="underline-offset-4 hover:underline">{names[r.profile_id]}</Link> : <span>{names[r.profile_id]}</span>}
                   {qualified && <span className="ml-2 rounded-full bg-win px-2 py-0.5 text-xs text-paper">{t.qualified}</span>}
                 </td>
                 <td className="num py-2.5 pr-3 whitespace-nowrap">

@@ -12,6 +12,8 @@ import EventStage from './EventStage';
 import JudgeRanking from './JudgeRanking';
 import StandingsTable from './StandingsTable';
 import EventLogo from './EventLogo';
+import TeamRegister from './TeamRegister';
+import { entryLabel } from '@/lib/events';
 import Bracket, { type MatchRow, type SwissRow } from './Bracket';
 import SmokeBoard, { type SmokeRow } from './SmokeBoard';
 import type { EventEntry, EventJudge, EventRow, EventShowcase, StandingRow } from '@/lib/types';
@@ -61,12 +63,12 @@ export default function EventView({ event, judges, entries, showcases, submissio
   const isHost = currentUserId === event.host_id;
   const activeJudges = judges.filter((j) => j.active);
   const isJudge = !!currentUserId && activeJudges.some((j) => j.judge_id === currentUserId);
-  const myEntry = entries.find((e) => e.profile_id === currentUserId);
+  const myEntry = entries.find((e) => e.profile_id === currentUserId || (!!currentUserId && e.partner_id === currentUserId));
   const registered = entries.filter((e) => ['registered', 'qualified', 'eliminated'].includes(e.status));
-  const names = Object.fromEntries(entries.map((e) => [e.profile_id, e.profile?.username ?? '']));
+  const names = Object.fromEntries(entries.map((e) => [e.profile_id, entryLabel(e)]));
   const performedIds = showcases.map((s) => s.profile_id);
   const performers = entries.filter((e) => e.status === 'registered' && performedIds.includes(e.profile_id))
-    .map((e) => ({ profile_id: e.profile_id, username: e.profile?.username ?? '' }));
+    .map((e) => ({ profile_id: e.profile_id, username: entryLabel(e) }));
   const submittedIds = submissions.map((s) => s.judge_id);
   const mySubmission = submissions.find((s) => s.judge_id === currentUserId);
   const closed = new Date(event.registration_closes_at).getTime() < Date.now();
@@ -135,14 +137,15 @@ export default function EventView({ event, judges, entries, showcases, submissio
           ) : isHost || isJudge ? null : myEntry?.status === 'registered' ? (
             <button disabled={busy} onClick={() => act('withdraw_event')} className={`${btn} justify-self-start border border-line`}>{t.withdraw}</button>
           ) : !closed ? (
+            event.kind === 'tag' ? <TeamRegister eventId={event.id} userId={currentUserId} /> :
             <button disabled={busy} onClick={() => act('register_event')} className={`${btn} justify-self-start bg-ink text-paper`}>{t.register}</button>
           ) : null}
           {registered.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {registered.map((e) => (
                 <li key={e.profile_id} className="flex items-center gap-2 rounded-full border border-line px-3 py-1 text-sm">
-                  @{e.profile?.username}
-                  {isHost && <button onClick={() => act('host_remove_entry', { p_profile: e.profile_id })} aria-label={t.remove(e.profile?.username ?? '')} className="text-muted">×</button>}
+                  {entryLabel(e)}
+                  {isHost && <button onClick={() => act('host_remove_entry', { p_profile: e.profile_id })} aria-label={t.remove(entryLabel(e))} className="text-muted">×</button>}
                 </li>
               ))}
             </ul>
@@ -232,7 +235,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
               return (
                 <li key={place} className={`grid gap-1 rounded-2xl p-5 ${place === 1 ? 'bg-ink text-paper' : 'border border-line bg-surface'}`}>
                   <span className="num text-4xl leading-none">{t.places[place - 1]}</span>
-                  <span className="handle text-xl">{e ? `@${e.profile?.username}` : '—'}</span>
+                  <span className="handle text-xl">{e ? entryLabel(e) : '—'}</span>
                   {event.ranked && event.approved_at && <span className="text-sm opacity-70">{t.points(place === 1 ? 1000 : place === 2 ? 500 : 350)}</span>}
                 </li>
               );
@@ -243,7 +246,7 @@ export default function EventView({ event, judges, entries, showcases, submissio
               .sort((a, b) => ((a as EventEntry & { final_place: number }).final_place - (b as EventEntry & { final_place: number }).final_place))
               .map((x) => (
                 <li key={x.profile_id} className="flex justify-between border-b border-line py-1.5">
-                  <span>@{x.profile?.username}</span>
+                  <span>{entryLabel(x)}</span>
                   <span className="num text-muted">{(x as EventEntry & { final_place: number }).final_place}</span>
                 </li>
               ))}

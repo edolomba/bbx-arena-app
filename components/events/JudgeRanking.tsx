@@ -96,7 +96,7 @@ export default function JudgeRanking({ eventId, performers, showcases, savedOrde
             <li key={id} className="grid gap-3 rounded-2xl border border-line bg-surface p-4">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="num w-10 text-3xl leading-none">{i + 1}</span>
-                <span className="handle min-w-0 flex-1 truncate text-lg">@{name(id)}</span>
+                <span className="handle min-w-0 flex-1 truncate text-lg">{name(id)}</span>
                 <label className="flex items-center gap-2 text-sm">
                   <span className="text-muted">{t.draft}</span>
                   <select value={scores[id] ?? ''} onChange={(e) => setScore(id, Number(e.target.value))}

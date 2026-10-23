@@ -33,9 +33,11 @@ const field = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5';
 export default function CreateEventForm({ groupId }: { groupId: string }) {
   const c = useI18n().t.evNew;
   const g = useI18n().t.evg;
+  const tg = useI18n().t.tag;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [title, setTitle] = useState('Open');
+  const [kind, setKind] = useState<'solo' | 'tag'>('solo');
   const [description, setDescription] = useState('');
   const [maxP, setMaxP] = useState(16);
   const [advance, setAdvance] = useState(8);
@@ -57,7 +59,7 @@ export default function CreateEventForm({ groupId }: { groupId: string }) {
     setError(null);
     try {
       await eventRpc(supabase, 'create_category', {
-        p_group: groupId, p_category: title, p_audience: description || null, p_max_participants: maxP, p_advance_count: advance,
+        p_group: groupId, p_category: title, p_audience: description || null, p_kind: kind, p_max_participants: maxP, p_advance_count: advance,
         p_judges: judges.slice(0, judgeCount).map((j) => j.trim()), p_registration_hours: regHours, p_main_format: mainFormat,
         p_showcase_seconds: showcase, p_battle_round_seconds: roundSec, p_battle_rounds: rounds, p_judge_vote_seconds: voteSec,
         p_ranked: ranked,
@@ -77,6 +79,18 @@ export default function CreateEventForm({ groupId }: { groupId: string }) {
         <span className="text-muted">{g.categoryName}</span>
         <input required maxLength={40} value={title} onChange={(e) => setTitle(e.target.value)} className={field} placeholder={g.categoryNamePh} />
       </label>
+      <fieldset className="grid gap-2 text-sm">
+        <legend className="mb-1 text-muted">{tg.kind}</legend>
+        <div className="flex flex-wrap gap-2">
+          {(['solo', 'tag'] as const).map((k) => (
+            <button key={k} type="button" onClick={() => setKind(k)}
+              className={`rounded-full border px-4 py-2 ${kind === k ? 'border-gold bg-gold/15 text-gold' : 'border-line text-muted hover:text-ink'}`}>
+              {k === 'solo' ? tg.kindSolo : tg.kindTag}
+            </button>
+          ))}
+        </div>
+        {kind === 'tag' && <p className="text-muted">{tg.kindTagNote}</p>}
+      </fieldset>
       <div className="grid gap-2 text-sm">
         <label className="grid gap-1">
           <span className="text-muted">{g.audience}</span>

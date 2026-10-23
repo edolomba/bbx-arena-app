@@ -58,7 +58,7 @@ export default function SmokeBoard({ eventId, isHost, live, target, smoke, match
         <div className="grid gap-3 rounded-2xl border border-line bg-surface p-5">
           <p className="text-sm text-muted">{t.battleN(current.round)}</p>
           <p className="handle text-[clamp(1.6rem,5vw,2.6rem)] leading-tight">
-            @{names[current.a_id!]} <span className="text-muted">vs</span> @{names[current.b_id!]}
+            {names[current.a_id!]} <span className="text-muted">vs</span> {names[current.b_id!]}
           </p>
           <p className="text-sm text-muted">{t.holdsStage(names[current.a_id!])}</p>
           {isHost && (
@@ -83,7 +83,7 @@ export default function SmokeBoard({ eventId, isHost, live, target, smoke, match
             {board.map((s) => (
               <li key={s.profile_id} className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1">
                 <span className="truncate">
-                  @{names[s.profile_id]}
+                  {names[s.profile_id]}
                   {s.queue_pos === null && <span className="ml-2 rounded-full bg-sub px-2 py-0.5 text-xs text-paper">{t.onStage}</span>}
                 </span>
                 <span className="num text-xl">{s.points}<span className="text-sm text-muted">/{target}</span></span>
@@ -100,7 +100,7 @@ export default function SmokeBoard({ eventId, isHost, live, target, smoke, match
             <ol className="grid border-t-2 border-ink">
               {line.map((s, i) => (
                 <li key={s.profile_id} className="grid grid-cols-[1.5rem_1fr] gap-3 border-b border-line py-2">
-                  <span className="num text-muted">{i + 1}</span><span>@{names[s.profile_id]}</span>
+                  <span className="num text-muted">{i + 1}</span><span>{names[s.profile_id]}</span>
                 </li>
               ))}
             </ol>
@@ -116,7 +116,7 @@ export default function SmokeBoard({ eventId, isHost, live, target, smoke, match
               <li key={m.id} className="grid grid-cols-[2.5rem_1fr_auto] items-baseline gap-3 border-b border-line py-2">
                 <span className="num text-muted">{m.round}</span>
                 <span>
-                  <strong>@{names[m.winner_id!]}</strong> {t.beat} @{names[m.winner_id === m.a_id ? m.b_id! : m.a_id!]}
+                  <strong>{names[m.winner_id!]}</strong> {t.beat} {names[m.winner_id === m.a_id ? m.b_id! : m.a_id!]}
                   {m.walkover && <span className="text-muted"> ({t.noShow})</span>}
                 </span>
                 {m.battle_id && !m.walkover ? <Link href={`/battles/${m.battle_id}`} className="text-muted underline underline-offset-4">{t.replay}</Link> : <span />}
