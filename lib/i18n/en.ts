@@ -1096,6 +1096,10 @@ export const en = {
   tag: {
     format: 'Format', solo: '1v1', tagTeam: 'Tag Team 2v2', chip: 'Tag Team',
     onlyTurns: 'Tag Team battles are take-turns. Each team round is recorded in two layers: one of you records first, the other records over it.',
+    liveNote: 'Both teams record their round before the start, in two layers. The rounds premiere together for everyone in the room.',
+    stageNote: 'Live on stage: in your team’s round both of your mics are open. A host runs the rounds; 3 or 5 judges, or the audience, decide.',
+    hostPh: '@host (empty: you host, Casual)',
+    judgesPh: '@judge1 @judge2 @judge3 (or empty)',
     mySide: 'Your side', myTeam: 'My Tag Team', casual: 'Casual duo',
     partner: 'Partner (optional)', partnerPh: '@handle, or empty for an open seat',
     noTeams: 'You don’t have an active Tag Team yet.', createTeam: 'Create one',
@@ -1114,6 +1118,7 @@ export const en = {
     nudge: 'Fine-tune the timing', nudgeHint: 'If your layer sounds early or late, move it and listen again.',
     earlier: 'earlier', later: 'later',
     submit: 'Submit the team round', retry: 'Record again', processing: 'Mixing…', failed: 'Something went wrong. Try again.',
+    teamRoundIn: 'Your team’s round is in. See you at the premiere!',
     otherTeamTurn: 'The other team is recording.',
   },
   time: {

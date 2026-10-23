@@ -1092,6 +1092,10 @@ export const pt: Dict = {
   tag: {
     format: 'Formato', solo: '1v1', tagTeam: 'Tag Team 2v2', chip: 'Tag Team',
     onlyTurns: 'Batalhas Tag Team são por turnos. Cada round da dupla é gravado em duas camadas: um grava primeiro e o outro grava por cima.',
+    liveNote: 'As duas duplas gravam o round antes do horário, em duas camadas. Os rounds estreiam juntos para todos na sala.',
+    stageNote: 'Ao vivo no palco: no round da sua dupla, os microfones dos dois ficam abertos. Um host conduz os rounds; 3 ou 5 juízes, ou o público, decidem.',
+    hostPh: '@host (vazio: você é o host, Casual)',
+    judgesPh: '@juiz1 @juiz2 @juiz3 (ou vazio)',
     mySide: 'Seu lado', myTeam: 'Meu Tag Team', casual: 'Dupla casual',
     partner: 'Parceiro (opcional)', partnerPh: '@usuário, ou vazio para deixar a vaga aberta',
     noTeams: 'Você ainda não tem um Tag Team ativo.', createTeam: 'Criar um',
@@ -1110,6 +1114,7 @@ export const pt: Dict = {
     nudge: 'Ajuste fino do encaixe', nudgeHint: 'Se a sua camada parecer adiantada ou atrasada, mova aqui e ouça de novo.',
     earlier: 'antes', later: 'depois',
     submit: 'Enviar o round da dupla', retry: 'Gravar de novo', processing: 'Misturando…', failed: 'Algo deu errado. Tente de novo.',
+    teamRoundIn: 'O round da sua dupla foi enviado. Até a estreia!',
     otherTeamTurn: 'A outra dupla está gravando.',
   },
   time: {

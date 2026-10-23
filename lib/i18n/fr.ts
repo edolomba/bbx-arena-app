@@ -1092,6 +1092,10 @@ export const fr: Dict = {
   tag: {
     format: 'Format', solo: '1v1', tagTeam: 'Tag Team 2v2', chip: 'Tag Team',
     onlyTurns: 'Les battles Tag Team se font chacun son tour. Chaque round du duo s’enregistre en deux couches : l’un enregistre d’abord, l’autre enregistre par-dessus.',
+    liveNote: 'Les deux duos enregistrent leur round avant le début, en deux couches. Les rounds sont diffusés ensemble pour toute la salle.',
+    stageNote: 'En direct sur scène : pendant le round de ton duo, vos deux micros sont ouverts. Un host lance les rounds ; 3 ou 5 juges, ou le public, décident.',
+    hostPh: '@host (vide : tu es host, Casual)',
+    judgesPh: '@juge1 @juge2 @juge3 (ou vide)',
     mySide: 'Ton côté', myTeam: 'Mon Tag Team', casual: 'Duo casual',
     partner: 'Binôme (facultatif)', partnerPh: '@pseudo, ou vide pour laisser la place libre',
     noTeams: 'Tu n’as pas encore de Tag Team actif.', createTeam: 'En créer un',
@@ -1110,6 +1114,7 @@ export const fr: Dict = {
     nudge: 'Réglage fin', nudgeHint: 'Si ta couche sonne en avance ou en retard, décale-la et réécoute.',
     earlier: 'avant', later: 'après',
     submit: 'Envoyer le round du duo', retry: 'Réenregistrer', processing: 'Mixage…', failed: 'Un problème est survenu. Réessaie.',
+    teamRoundIn: 'Le round de ton duo est envoyé. Rendez-vous à la première !',
     otherTeamTurn: 'L’autre duo enregistre.',
   },
   time: {

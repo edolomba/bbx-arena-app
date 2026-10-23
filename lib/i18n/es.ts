@@ -1092,6 +1092,10 @@ export const es: Dict = {
   tag: {
     format: 'Formato', solo: '1v1', tagTeam: 'Tag Team 2v2', chip: 'Tag Team',
     onlyTurns: 'Las batallas Tag Team son por turnos. Cada ronda del dúo se graba en dos capas: uno graba primero y el otro graba encima.',
+    liveNote: 'Los dos dúos graban su ronda antes del inicio, en dos capas. Las rondas se estrenan juntas para toda la sala.',
+    stageNote: 'En directo en el escenario: en la ronda de tu dúo, los micros de los dos están abiertos. Un host dirige las rondas; deciden 3 o 5 jueces, o el público.',
+    hostPh: '@host (vacío: tú eres el host, Casual)',
+    judgesPh: '@juez1 @juez2 @juez3 (o vacío)',
     mySide: 'Tu lado', myTeam: 'Mi Tag Team', casual: 'Dúo casual',
     partner: 'Pareja (opcional)', partnerPh: '@usuario, o vacío para dejar la plaza abierta',
     noTeams: 'Aún no tienes un Tag Team activo.', createTeam: 'Crear uno',
@@ -1110,6 +1114,7 @@ export const es: Dict = {
     nudge: 'Ajuste fino', nudgeHint: 'Si tu capa suena adelantada o atrasada, muévela y vuelve a escuchar.',
     earlier: 'antes', later: 'después',
     submit: 'Enviar la ronda del dúo', retry: 'Grabar de nuevo', processing: 'Mezclando…', failed: 'Algo salió mal. Inténtalo de nuevo.',
+    teamRoundIn: 'La ronda de tu dúo está enviada. ¡Nos vemos en el estreno!',
     otherTeamTurn: 'El otro dúo está grabando.',
   },
   time: {
