@@ -29,8 +29,11 @@ export default async function BattleRow({ b, viewerId }: { b: BattleWithPlayers;
       href={`/battles/${b.id}`}
       className="grid gap-1 rounded-2xl border border-line bg-surface px-4 py-3.5 hover:border-ink"
     >
-      <span className="font-bold [font-stretch:112%] break-words">@{b.challenger.username} vs {opp}</span>
+      <span className="font-bold [font-stretch:112%] break-words">
+        {b.format === 'tag' ? `${b.challenger_team?.name ?? `@${b.challenger.username}${b.challenger_partner ? ` & @${b.challenger_partner.username}` : ' & …'}`} vs ${b.opponent_team?.name ?? (b.opponent ? `@${b.opponent.username}${b.opponent_partner ? ` & @${b.opponent_partner.username}` : ' & …'}` : opp)}` : <>@{b.challenger.username} vs {opp}</>}
+      </span>
       <span className="flex flex-wrap items-center gap-2 text-sm text-muted">
+        {b.format === 'tag' && <span className="rounded bg-gold px-1.5 text-xs font-bold text-paper">2v2</span>}
         {b.mode !== 'async' && <span className="rounded bg-sub px-1.5 text-xs font-bold text-paper">{b.mode === 'stage' ? t.chipStage : t.chipLive}</span>}
         <span className={`size-2 rounded-full ${hot ? 'bg-sub' : b.status === 'finished' ? 'bg-win' : 'bg-line'}`} aria-hidden="true" />
         <span className="num">{status}</span>

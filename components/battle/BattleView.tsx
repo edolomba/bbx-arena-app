@@ -14,6 +14,8 @@ import StageRoom from './StageRoom';
 import ReportButton from '@/components/moderation/ReportButton';
 import BadgeChip from '@/components/badges/BadgeChip';
 import Avatar from '@/components/Avatar';
+import { TagAccept, TagSide } from './TagControls';
+import TagRoundPanel from './TagRoundPanel';
 import { useI18n } from '@/components/i18n/I18nProvider';
 import { flagEmoji, intervalHours, signed } from '@/lib/format';
 import type { BattleJudge, BattleWithPlayers, JudgeVote, PreparedTake, ProfileSummary, Submission, Vote } from '@/lib/types';
@@ -125,7 +127,8 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
   const judged = isStage && (battle.judge_count ?? 0) > 0;
   const scheduled = isLive || isStage;
   const votingHours = intervalHours(battle.voting_window);
-  const isParticipant = currentUserId != null && (currentUserId === battle.challenger_id || currentUserId === battle.opponent_id);
+  const isParticipant = currentUserId != null && (currentUserId === battle.challenger_id || currentUserId === battle.opponent_id
+    || (battle.format === 'tag' && (currentUserId === battle.challenger_partner_id || currentUserId === battle.opponent_partner_id)));
   const myVote = votes.find((v) => v.voter_id === currentUserId) ?? null;
   const tally = sides.map((s) => votes.filter((v) => v.voted_for_user_id === s.id).length);
   const totalVotes = tally[0] + tally[1];
@@ -212,9 +215,12 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
     setVotes((prev) => (prev.some((x) => x.id === v.id) ? prev : [...prev, v]));
   });
 
-  const canAccept = currentUserId != null && currentUserId !== battle.challenger_id &&
+  const isTag = battle.format === 'tag';
+  const tagSeated = isTag && !!currentUserId && [battle.challenger_partner_id, battle.opponent_partner_id].includes(currentUserId);
+  const canAccept = !isTag && currentUserId != null && currentUserId !== battle.challenger_id &&
     (battle.status === 'open' || (battle.status === 'pending' && battle.opponent_id === currentUserId));
-  const canDecline = isParticipant && (battle.status === 'open' || battle.status === 'pending');
+  const canDecline = (isTag ? currentUserId != null && [battle.challenger_id, battle.opponent_id].includes(currentUserId) : isParticipant)
+    && (battle.status === 'open' || battle.status === 'pending');
   const showLiveRoom = isLive && (battle.status === 'active' || battle.status === 'live');
   const showStage = isStage && (battle.status === 'active' || battle.status === 'live');
   const inviteUrl = shareToken && origin ? `${origin}/battles/${battle.id}?t=${shareToken}` : null;
@@ -226,15 +232,15 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
           <span className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-gold/12 to-transparent" aria-hidden="true" />
           <span className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sub/12 to-transparent" aria-hidden="true" />
           <div className="relative">
-            <PlayerHeader p={challenger} align="start" isWinner={battle.winner_id === battle.challenger_id}
+            {isTag ? <TagSide battle={battle} side="challenger" viewerId={currentUserId} align="start" /> : <PlayerHeader p={challenger} align="start" isWinner={battle.winner_id === battle.challenger_id}
               isLoser={battle.status === 'finished' && !!battle.winner_id && battle.winner_id !== battle.challenger_id}
-              eloDelta={battle.status === 'finished' ? battle.challenger_elo_delta : null} />
+              eloDelta={battle.status === 'finished' ? battle.challenger_elo_delta : null} />}
           </div>
           <span className="handle relative justify-self-center bg-gradient-to-b from-gold to-sub bg-clip-text text-[clamp(3rem,9vw,6rem)] leading-none text-transparent italic" aria-hidden="true">VS</span>
           <div className="relative">
-            <PlayerHeader p={opponent} align="end" isWinner={battle.opponent_id != null && battle.winner_id === battle.opponent_id}
+            {isTag ? <TagSide battle={battle} side="opponent" viewerId={currentUserId} align="end" /> : <PlayerHeader p={opponent} align="end" isWinner={battle.opponent_id != null && battle.winner_id === battle.opponent_id}
               isLoser={battle.status === 'finished' && !!battle.winner_id && battle.opponent_id != null && battle.winner_id !== battle.opponent_id}
-              eloDelta={battle.status === 'finished' ? battle.opponent_elo_delta : null} />
+              eloDelta={battle.status === 'finished' ? battle.opponent_elo_delta : null} />}
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4 border-y border-line py-3">
@@ -242,6 +248,10 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
           <p className="text-sm text-muted">{details}</p>
         </div>
 
+        {isTag && <TagAccept battle={battle} viewerId={currentUserId} />}
+        {isTag && battle.status === 'active' && currentUserId && ([battle.challenger_id, battle.opponent_id].includes(currentUserId) || tagSeated) && (
+          <TagRoundPanel battle={battle} userId={currentUserId} />
+        )}
         {(canAccept || canDecline || (inviteUrl && (battle.status === 'open' || battle.status === 'pending'))) && (
           <div className="flex flex-wrap items-center gap-3">
             {canAccept && (
@@ -325,7 +335,7 @@ export default function BattleView({ battle, submissions, initialVotes, currentU
                           </div>
                         );
                       }
-                      if (isTurn && side.id === currentUserId) {
+                      if (isTurn && side.id === currentUserId && !isTag) {
                         return (
                           <div key={idx} className="grid gap-3 md:col-span-2">
                             <p>{tb.yourRound(round)} <Countdown to={battle.turn_deadline!} /> {tb.toSubmit}</p>
