@@ -28,8 +28,7 @@ export default async function TeamsPage() {
         <h1 className="handle text-[clamp(2.4rem,7vw,4.2rem)] leading-none">{t.title}</h1>
         <p className="max-w-[62ch] text-muted">{t.lead}</p>
         <nav className="flex flex-wrap gap-2 text-sm">
-          <Link href="/ranking" className="rounded-full border border-line px-4 py-1.5 text-muted hover:text-ink">{all.board.tab}</Link>
-          <Link href="/teams" aria-current="page" className="rounded-full bg-ink px-4 py-1.5 text-paper">{t.tab}</Link>
+          <Link href="/ranking?scope=tag" className="rounded-full border border-line px-4 py-1.5 text-muted hover:text-ink">🏆 {all.rank.title}: {t.tab}</Link>
         </nav>
       </header>
 

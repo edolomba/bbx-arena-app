@@ -5,6 +5,7 @@ import type { LeaderboardRow, ScoringRules, Season } from '@/lib/types';
 import BadgeChip from '@/components/badges/BadgeChip';
 import Avatar from '@/components/Avatar';
 import RatingBoard from '@/components/ranking/RatingBoard';
+import TeamBoard from '@/components/ranking/TeamBoard';
 import { getT } from '@/lib/i18n/server';
 import { LOCALE_TAG } from '@/lib/i18n/config';
 
@@ -54,12 +55,13 @@ function Row({ r, me, badge, avatar, youLabel }: { r: LeaderboardRow; me: boolea
   );
 }
 
-export default async function RankingPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function RankingPage({ searchParams }: { searchParams: Promise<{ tab?: string; scope?: string }> }) {
   const { locale, t: all } = await getT();
   const t = all.rank;
   const tag = LOCALE_TAG[locale];
   const remaining = (ms: number) => { const mins = Math.max(0, Math.floor(ms / 60000)); return t.remaining(Math.floor(mins / 1440), Math.floor((mins % 1440) / 60), mins % 60); };
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, scope: rawScope } = await searchParams;
+  const scope: 'solo' | 'tag' = rawScope === 'tag' ? 'tag' : 'solo';
   const tab: Tab = rawTab && rawTab in TABS ? (rawTab as Tab) : 'rating';
   const period = TABS[tab].period;
   const nowIso = new Date().toISOString();
@@ -106,6 +108,16 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
         <p className="text-muted">{t.lead}</p>
       </header>
 
+      <nav aria-label={t.scopeLabel} className="grid grid-cols-2 gap-2 sm:max-w-md">
+        {(['solo', 'tag'] as const).map((s) => (
+          <Link key={s} href={s === 'solo' ? '/ranking' : '/ranking?scope=tag'} aria-current={scope === s ? 'page' : undefined}
+            className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-lg font-bold transition-colors ${scope === s ? 'border-gold bg-gold/15 text-gold' : 'border-line text-muted hover:border-muted hover:text-ink'}`}>
+            <span aria-hidden="true">{s === 'solo' ? '🎤' : '👥'}</span>{s === 'solo' ? t.scopeSolo : t.scopeTag}
+          </Link>
+        ))}
+      </nav>
+
+      {scope === 'tag' ? <TeamBoard /> : (<>
       <nav aria-label="Ranking period" className="flex flex-wrap gap-1">
         {(Object.keys(TABS) as Tab[]).map((key) => (
           <Link
@@ -117,7 +129,6 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             {key === 'rating' ? all.board.tab : t[TABS[key].label as 'week' | 'season' | 'all']}
           </Link>
         ))}
-        <Link href="/teams" className="rounded-full border border-line px-4 py-1.5 text-sm text-muted hover:text-ink">{all.teams.tab}</Link>
       </nav>
 
       {tab === 'rating' ? <RatingBoard /> : (<>
@@ -201,6 +212,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
           </p>
         </section>
       )}
+      </>)}
       </>)}
     </main>
   );
