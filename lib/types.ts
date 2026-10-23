@@ -63,6 +63,12 @@ export interface Battle {
   id: string;
   challenger_id: string;
   opponent_id: string | null;
+  format?: 'solo' | 'tag';
+  challenger_partner_id?: string | null;
+  opponent_partner_id?: string | null;
+  challenger_team_id?: string | null;
+  opponent_team_id?: string | null;
+  tag_accepted?: boolean;
   status: BattleStatus;
   mode: BattleMode;
   starts_at: string | null;
@@ -110,6 +116,10 @@ export interface JudgeVote {
 export interface BattleWithPlayers extends Battle {
   challenger: ProfileSummary;
   opponent: ProfileSummary | null;
+  challenger_partner?: ProfileSummary | null;
+  opponent_partner?: ProfileSummary | null;
+  challenger_team?: { id: string; name: string } | null;
+  opponent_team?: { id: string; name: string } | null;
   host?: { username: string } | null;
 }
 
@@ -314,4 +324,14 @@ export interface EventSession {
   category_id: string | null;
   starts_at: string;
   ends_at: string;
+}
+
+export interface TagPart {
+  battle_id: string;
+  side_captain: string;
+  round_number: number;
+  profile_id: string;
+  audio_path: string;
+  duration_ms: number;
+  created_at: string;
 }
