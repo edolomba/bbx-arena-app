@@ -9,7 +9,7 @@ import { getT } from '@/lib/i18n/server';
 import type { BattleWithPlayers, EventGroup, EventRow } from '@/lib/types';
 
 const PLAYER = 'id, username, full_name, avatar_url, country, elo_rating, featured_badge';
-const SELECT = `*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER})`;
+const SELECT = `*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), challenger_partner:profiles!battles_challenger_partner_id_fkey(${PLAYER}), opponent_partner:profiles!battles_opponent_partner_id_fkey(${PLAYER}), challenger_team:teams!battles_challenger_team_id_fkey(id, name), opponent_team:teams!battles_opponent_team_id_fkey(id, name)`;
 
 export default async function Home() {
   const supabase = await createClient();
@@ -19,7 +19,7 @@ export default async function Home() {
     supabase.auth.getUser(),
     supabase.from('battles').select(SELECT).in('mode', ['live', 'stage']).in('status', ['active', 'live']).order('starts_at').limit(6),
     supabase.from('battles').select(SELECT).eq('status', 'voting').order('voting_ends_at').limit(6),
-    supabase.from('battles').select(SELECT).eq('status', 'open').eq('is_listed', true).order('created_at', { ascending: false }).limit(6),
+    supabase.from('battles').select(SELECT).eq('is_listed', true).or('status.eq.open,and(format.eq.tag,status.eq.pending,tag_accepted.eq.true)').order('created_at', { ascending: false }).limit(12),
     supabase.rpc('rating_board', { p_limit: 3 }),
     supabase.from('event_groups').select('*, host:profiles!event_groups_host_id_fkey(username)').gte('ends_at', nowIso).order('starts_at').limit(3),
     supabase.from('directory_entries').select('id', { count: 'exact', head: true }),
@@ -28,7 +28,13 @@ export default async function Home() {
   ]);
   const liveBattles = (live.data ?? []) as BattleWithPlayers[];
   const votingBattles = (voting.data ?? []) as BattleWithPlayers[];
-  const openBattles = ((open.data ?? []) as BattleWithPlayers[]).filter((b) => b.challenger_id !== user?.id);
+  // open challenges, plus 2v2 battles that still have a free partner seat
+  const openBattles = ((open.data ?? []) as BattleWithPlayers[]).filter((b) => {
+    const seated = [b.challenger_id, b.challenger_partner_id, b.opponent_id, b.opponent_partner_id];
+    if (user && seated.includes(user.id)) return false;
+    if (b.status === 'open') return true;
+    return (!b.challenger_partner_id && !b.challenger_team_id) || (!!b.opponent_id && !b.opponent_partner_id && !b.opponent_team_id);
+  }).slice(0, 6);
   const podium = (top.data ?? []) as PodiumRow[];
   const upcoming = (groups.data ?? []) as EventGroup[];
   const { data: cats } = upcoming.length

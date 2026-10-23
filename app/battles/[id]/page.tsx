@@ -42,7 +42,7 @@ export default async function BattlePage({
   const [{ data: battle }, { data: submissions }, { data: votes }, { data: auth }, { data: invite }, { data: judges }, { data: judgeVotes }] = await Promise.all([
     supabase
       .from('battles')
-      .select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), host:profiles!battles_host_id_fkey(username)`)
+      .select(`*, challenger:profiles!battles_challenger_id_fkey(${PLAYER}), opponent:profiles!battles_opponent_id_fkey(${PLAYER}), host:profiles!battles_host_id_fkey(username), challenger_partner:profiles!battles_challenger_partner_id_fkey(${PLAYER}), opponent_partner:profiles!battles_opponent_partner_id_fkey(${PLAYER}), challenger_team:teams!battles_challenger_team_id_fkey(id, name), opponent_team:teams!battles_opponent_team_id_fkey(id, name)`)
       .eq('id', id)
       .maybeSingle(),
     supabase.from('submissions').select('*').eq('battle_id', id).order('round_number'),
