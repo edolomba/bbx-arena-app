@@ -27,6 +27,7 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
   const [voting, setVoting] = useState(24);
   const [ranked, setRanked] = useState(true);
   const [mode, setMode] = useState<'async' | 'live' | 'stage'>('async');
+  const [responseHours, setResponseHours] = useState(24);
   const [startsIn, setStartsIn] = useState(60);
   const [host, setHost] = useState('');
   const [judgeList, setJudgeList] = useState('');
@@ -56,7 +57,7 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
       };
       const judges = judgeList.split(/[\s,]+/).map((j) => j.replace(/^@/, '')).filter(Boolean);
       const id = mode === 'async'
-        ? await rpcOrThrow(supabase, 'create_tag_battle', { ...sides, p_round_duration: duration, p_rounds: rounds, p_voting_hours: voting, p_ranked: ranked })
+        ? await rpcOrThrow(supabase, 'create_tag_battle', { ...sides, p_round_duration: duration, p_rounds: rounds, p_voting_hours: voting, p_ranked: ranked, p_response_hours: responseHours })
         : await rpcOrThrow(supabase, 'create_tag_battle_live', {
             ...sides, p_mode: mode, p_starts_in_minutes: startsIn, p_round_duration: duration,
             p_rounds: mode === 'live' ? 1 : rounds, p_voting_hours: voting,
@@ -133,6 +134,13 @@ export default function CreateTagBattleForm({ userId }: { userId: string }) {
             {[1, 12, 24].map((h) => <option key={h} value={h}>{h} h</option>)}
           </select></label>
       </div>
+      {mode === 'async' && (
+        <label className="grid gap-1 text-sm"><span className="text-muted">{all.create.responseTime}</span>
+          <select value={responseHours} onChange={(e) => setResponseHours(Number(e.target.value))} className={field}>
+            {[1, 3, 12, 24].map((h) => <option key={h} value={h}>{all.create.hoursShort(h)}</option>)}
+          </select>
+          <span className="text-xs text-muted">{all.create.asyncNoteH(responseHours)}</span></label>
+      )}
       {mode !== 'async' && (
         <label className="grid gap-1 text-sm"><span className="text-muted">{all.create.starts}</span>
           <select value={startsIn} onChange={(e) => setStartsIn(Number(e.target.value))} className={field}>

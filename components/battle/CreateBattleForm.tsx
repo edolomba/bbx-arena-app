@@ -63,6 +63,7 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
   const [roundSeconds, setRoundSeconds] = useState<number>(45);
   const [rounds, setRounds] = useState<number>(1);
   const [votingHours, setVotingHours] = useState<number>(12);
+  const [responseHours, setResponseHours] = useState<number>(24);
   const [startsIn, setStartsIn] = useState<number>(60);
   const [hostMode, setHostMode] = useState<'me' | 'other'>('other');
   const [host, setHost] = useState('');
@@ -80,7 +81,7 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
     try {
       const id = await createBattle(supabase, {
         opponent: who === 'open' ? '' : opponent,
-        roundSeconds, mode, votingHours, startsInMinutes: startsIn,
+        roundSeconds, mode, votingHours, startsInMinutes: startsIn, responseHours,
         rounds: mode === 'stage' ? rounds : 1,
         host: mode === 'stage' && hostMode === 'other' ? host : undefined,
         judges: mode === 'stage' ? judges.slice(0, judgeCount).filter(Boolean) : undefined,
@@ -139,7 +140,9 @@ export default function CreateBattleForm({ defaultOpponent = '' }: { defaultOppo
             ? c.stageStartNote
             : c.liveStartNote} />
       ) : (
-        <p className="text-sm text-muted">{c.asyncNote}</p>
+        <Segmented name="response" legend={c.responseTime} value={responseHours} onChange={setResponseHours}
+          options={[1, 3, 12, 24].map((h) => ({ value: h, label: c.hoursShort(h) }))}
+          note={c.asyncNoteH(responseHours)} />
       )}
 
       {mode === 'stage' && (

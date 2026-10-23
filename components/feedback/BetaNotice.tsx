@@ -17,7 +17,7 @@ export default async function BetaNotice() {
         <div className="grid gap-1.5">
           <p className="label">{t.whatsNew}</p>
           <ul className="grid gap-1.5">
-            {t.news.map((n) => (
+            {t.news.slice(0, 4).map((n) => (
               <li key={n.date + n.text} className="flex gap-3 text-sm">
                 <span className="shrink-0 font-mono text-xs text-gold">
                   {new Date(n.date).toLocaleDateString(LOCALE_TAG[locale], { day: 'numeric', month: 'short' })}
