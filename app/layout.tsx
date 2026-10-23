@@ -7,7 +7,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'Beatbox Arena', template: '%s · Beatbox Arena' },
-  description: '1v1 beatbox battles in real studio quality. Profiles, ratings, live battles, tournaments and public votes.',
+  description: 'Beatbox battles, 1v1 and 2v2, in real studio quality. Tag Teams, live stages, tournaments, ratings and public votes.',
   icons: { icon: [{ url: '/favicon-48.png', sizes: '48x48' }, { url: '/icon-192.png', sizes: '192x192' }], apple: '/apple-icon.png' },
   appleWebApp: { capable: true, title: 'BBX Arena', statusBarStyle: 'black-translucent' },
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://bbx-arena-site.vercel.app'),

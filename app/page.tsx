@@ -5,6 +5,7 @@ import BetaNotice from '@/components/feedback/BetaNotice';
 import Podium, { type PodiumRow } from '@/components/ranking/Podium';
 import GroupCard from '@/components/events/GroupCard';
 import FeaturedStory from '@/components/home/FeaturedStory';
+import TagTeamSpotlight from '@/components/home/TagTeamSpotlight';
 import { getT } from '@/lib/i18n/server';
 import type { BattleWithPlayers, EventGroup, EventRow } from '@/lib/types';
 
@@ -107,6 +108,8 @@ export default async function Home() {
           </dl>
         )}
       </section>
+
+      <TagTeamSpotlight />
 
       {!user && (
         <section className="grid gap-5" aria-labelledby="how">
