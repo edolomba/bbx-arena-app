@@ -42,10 +42,10 @@ export default async function EventGroupPage({ params }: { params: Promise<{ id:
   const isHost = auth.user?.id === group.host_id;
   const ids = categories.map((c) => c.id);
   const [{ data: entries }, { data: judges }] = await Promise.all([
-    ids.length ? supabase.from('event_entries').select('event_id, status, final_place, profile:profiles!event_entries_profile_id_fkey(username, avatar_url, country)').in('event_id', ids) : Promise.resolve({ data: [] }),
+    ids.length ? supabase.from('event_entries').select('event_id, status, final_place, team:teams!event_entries_team_id_fkey(name), profile:profiles!event_entries_profile_id_fkey(username, avatar_url, country)').in('event_id', ids) : Promise.resolve({ data: [] }),
     ids.length ? supabase.from('event_judges').select('event_id').in('event_id', ids).eq('active', true) : Promise.resolve({ data: [] }),
   ]);
-  type Entry = { event_id: string; status: string; final_place: number | null; profile: { username: string; avatar_url: string | null; country: string | null } | null };
+  type Entry = { event_id: string; status: string; final_place: number | null; team: { name: string } | null; profile: { username: string; avatar_url: string | null; country: string | null } | null };
   const ent = (entries ?? []) as unknown as Entry[];
   const counted = (cid: string) => ent.filter((e) => e.event_id === cid && !['withdrawn', 'removed'].includes(e.status));
   const totalParticipants = new Set(ent.filter((e) => !['withdrawn', 'removed'].includes(e.status)).map((e) => e.profile?.username)).size;
@@ -103,7 +103,7 @@ export default async function EventGroupPage({ params }: { params: Promise<{ id:
                       <span className="label">{all.ev.status[c.status]}{c.live ? all.ev.liveNow : ''}</span>
                       <span className="font-mono text-[0.7rem] text-muted">{t.participantsN(people.length)} · {t.judgesN(nJudges)}</span>
                     </span>
-                    <span className="text-xl font-bold">{c.category_name ?? c.title}</span>
+                    <span className="flex flex-wrap items-center gap-2 text-xl font-bold">{c.category_name ?? c.title}{c.kind === 'tag' && <span className="rounded bg-gold px-1.5 text-xs font-bold text-paper">Tag Team</span>}</span>
                     {c.audience && <span className="justify-self-start rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{c.audience}</span>}
                     <span className="text-sm text-muted">
                       {c.main_format === 'seven_to_smoke' ? '7 to Smoke' : c.main_format === 'swiss' ? all.evNew.swiss : all.evNew.knockout}
@@ -114,7 +114,7 @@ export default async function EventGroupPage({ params }: { params: Promise<{ id:
                           <li key={e.profile?.username} className="flex items-center gap-2">
                             <span aria-hidden="true">{['🥇', '🥈', '🥉'][e.final_place! - 1]}</span>
                             <Avatar username={e.profile?.username ?? '?'} url={e.profile?.avatar_url} size="xs" />
-                            <span className={e.final_place === 1 ? 'font-bold' : 'text-muted'}>{e.profile?.username}</span>
+                            <span className={e.final_place === 1 ? 'font-bold' : 'text-muted'}>{e.team?.name ?? e.profile?.username}</span>
                             <span className="font-mono text-[0.65rem] text-muted">{e.profile?.country}</span>
                           </li>
                         ))}

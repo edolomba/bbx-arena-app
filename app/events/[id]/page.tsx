@@ -16,7 +16,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const [{ data: event }, { data: judges }, { data: entries }, { data: showcases }, { data: subs }, { data: standings }, { data: auth }] = await Promise.all([
     supabase.from('events').select('*, host:profiles!events_host_id_fkey(username)').eq('id', id).maybeSingle(),
     supabase.from('event_judges').select('judge_id, active, judge:profiles!event_judges_judge_id_fkey(username)').eq('event_id', id).order('created_at'),
-    supabase.from('event_entries').select('profile_id, status, stage_order, elim_place, elim_score, final_place, profile:profiles!event_entries_profile_id_fkey(username, country, elo_rating)').eq('event_id', id).order('created_at'),
+    supabase.from('event_entries').select('profile_id, status, stage_order, elim_place, elim_score, final_place, team_id, partner_id, team:teams!event_entries_team_id_fkey(id, name), partner:profiles!event_entries_partner_id_fkey(username), profile:profiles!event_entries_profile_id_fkey(username, country, elo_rating)').eq('event_id', id).order('created_at'),
     supabase.from('event_showcases').select('profile_id, audio_path, duration_ms, waveform_data, integrated_lufs').eq('event_id', id),
     supabase.from('elimination_submissions').select('judge_id, submitted_at').eq('event_id', id),
     supabase.rpc('event_standings', { p_event: id }),
