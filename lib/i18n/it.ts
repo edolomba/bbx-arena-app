@@ -654,6 +654,7 @@ export const it: Dict = {
     submit: 'Crea l’evento e apri le iscrizioni',
   },
   rank: {
+    scopeLabel: 'Classifica', scopeSolo: 'Solo', scopeTag: 'Tag Team',
     title: 'Classifica',
     lead: 'Punti per le battle, mai per i voti.',
     week: 'Questa settimana',

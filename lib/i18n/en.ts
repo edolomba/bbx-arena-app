@@ -658,6 +658,7 @@ export const en = {
     submit: 'Create event and open registration',
   },
   rank: {
+    scopeLabel: 'Ranking', scopeSolo: 'Solo', scopeTag: 'Tag Team',
     title: 'Ranking',
     lead: 'Points for battles, never for votes.',
     week: 'This week',
