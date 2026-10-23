@@ -35,3 +35,12 @@ export const EVENT_STATUS_LABEL: Record<string, string> = {
   finished: 'Finished',
   cancelled: 'Cancelled',
 };
+
+/** Tag Team showcase: one member's own take (the mix is submitted with submitShowcase). */
+export async function submitShowcasePart(supabase: SupabaseClient, eventId: string, userId: string, take: PreparedTake) {
+  const path = `event-${eventId}/${userId}/${crypto.randomUUID()}.${take.fileExt}`;
+  const { error: up } = await supabase.storage.from(AUDIO_BUCKET).upload(path, take.blob, { contentType: take.contentType, upsert: false, cacheControl: '31536000' });
+  if (up) throw new Error(`The upload didn’t finish: ${up.message}. Try again.`);
+  const { error } = await supabase.rpc('submit_showcase_part', { p_event: eventId, p_audio_path: path, p_duration_ms: take.analysis.durationMs });
+  if (error) throw new Error(error.message);
+}

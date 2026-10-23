@@ -39,6 +39,13 @@ export const RULES: Record<Locale, RulesDoc> = {
         'If you miss a deadline, you lose by **forfeit**. Casual battles don’t touch rating or points.',
         '**Badges** arrive automatically: first battle, win streaks, upsets, tournament podiums and more. Your rarest one shows next to your name.',
       ] },
+      { id: 'tagteam', icon: '👥', title: 'Tag Team (2v2)', text: [
+        'A **fixed Tag Team** has a name, its own page, rating and ranking: create it in [Tag Teams](/teams) and your partner accepts. You can be in up to 3.',
+        'In **Start a battle → Tag Team 2v2** pick your Tag Team or a **casual duo** (your partner’s @, or an **open seat** anyone can take), and challenge a Tag Team or post an open challenge. The battle starts when all four seats are taken.',
+        '**Recorded battles:** one of you records the first part; the other puts headphones on and **records over it**. The site compensates the device delay, you can listen to the mix and fine-tune the timing; the mix is your team’s round.',
+        '**On stage:** in your team’s round both mics are open. Each of you records your own mic in full quality and the site mixes the two for the replay. For parts performed exactly together, being in the same room works best.',
+        'Results move the rating of all four members and of fixed Tag Teams. In events, Tag Team categories take fixed Tag Teams only, and both members get the full tournament points.',
+      ] },
       { id: 'events', icon: '🎪', title: 'Events and tournaments', text: [
         'Anyone can [create an event](/events/new): logo, name, edition, dates, description and a **schedule** shown in every visitor’s local time.',
         'Each event has one or more **categories** (Open, Junior, Tag team…). Each category has its own registrations, judges and bracket, and says **who can take part**.',
@@ -100,6 +107,13 @@ export const RULES: Record<Locale, RulesDoc> = {
         'As batalhas também dão **pontos no ranking** da semana, da temporada e geral. Os valores exatos estão na [página do ranking](/ranking).',
         'Se perder um prazo, você perde por **W.O.** Batalhas Casual não mexem em rating nem pontos.',
         'Os **selos** chegam sozinhos: primeira batalha, sequências de vitórias, zebras, pódios em torneios e mais. O mais raro aparece ao lado do seu nome.',
+      ] },
+      { id: 'tagteam', icon: '👥', title: 'Tag Team (2v2)', text: [
+        'Um **Tag Team fixo** tem nome, página, rating e ranking próprios: crie em [Tag Teams](/teams), e sua dupla aceita. Você pode estar em até 3.',
+        'Em **Criar batalha → Tag Team 2v2**, escolha seu Tag Team ou uma **dupla casual** (o @ do parceiro, ou uma **vaga aberta** para qualquer um), e desafie um Tag Team ou publique um desafio aberto. A batalha começa quando os quatro lugares estão ocupados.',
+        '**Batalhas gravadas:** um de vocês grava a primeira parte; o outro coloca o fone e **grava por cima**. O site compensa o atraso do aparelho, deixa ouvir a mistura e ajustar o encaixe; a mistura é o round da dupla.',
+        '**No palco:** no round da dupla, os dois microfones ficam abertos. Cada um grava o próprio microfone em qualidade máxima, e o site junta os dois para o replay. Para partes feitas exatamente juntas, estar no mesmo lugar funciona melhor.',
+        'Os resultados mexem no rating dos quatro integrantes e dos Tag Teams fixos. Nos eventos, as categorias Tag Team aceitam só Tag Teams fixos, e os dois integrantes recebem os pontos inteiros do torneio.',
       ] },
       { id: 'events', icon: '🎪', title: 'Eventos e torneios', text: [
         'Qualquer pessoa pode [criar um evento](/events/new): logo, nome, edição, datas, descrição e uma **programação** mostrada no horário local de cada visitante.',
@@ -163,6 +177,13 @@ export const RULES: Record<Locale, RulesDoc> = {
         'Si se te pasa un plazo, pierdes por **incomparecencia**. Las batallas Casual no afectan al rating ni a los puntos.',
         'Las **insignias** llegan solas: primera batalla, rachas, sorpresas, podios en torneos y más. La más rara aparece junto a tu nombre.',
       ] },
+      { id: 'tagteam', icon: '👥', title: 'Tag Team (2v2)', text: [
+        'Un **Tag Team fijo** tiene nombre, página, rating y ranking propios: créalo en [Tag Teams](/teams) y tu pareja acepta. Puedes estar en hasta 3.',
+        'En **Crear batalla → Tag Team 2v2** elige tu Tag Team o un **dúo casual** (el @ de tu pareja, o una **plaza abierta** para cualquiera), y desafía a un Tag Team o publica un desafío abierto. La batalla empieza cuando las cuatro plazas están ocupadas.',
+        '**Batallas grabadas:** uno de vosotros graba la primera parte; el otro se pone los auriculares y **graba encima**. La web compensa el retardo del dispositivo, deja escuchar la mezcla y ajustar el encaje; la mezcla es la ronda del dúo.',
+        '**En el escenario:** en la ronda del dúo, los dos micros están abiertos. Cada uno graba su micro en máxima calidad y la web junta los dos para la repetición. Para partes hechas exactamente juntas, estar en el mismo sitio funciona mejor.',
+        'Los resultados mueven el rating de los cuatro integrantes y de los Tag Teams fijos. En los eventos, las categorías Tag Team solo aceptan Tag Teams fijos, y los dos integrantes reciben los puntos completos del torneo.',
+      ] },
       { id: 'events', icon: '🎪', title: 'Eventos y torneos', text: [
         'Cualquiera puede [crear un evento](/events/new): logo, nombre, edición, fechas, descripción y un **programa** mostrado en la hora local de cada visitante.',
         'Cada evento tiene una o más **categorías** (Open, Junior, Tag team…). Cada categoría tiene sus inscripciones, jueces y cuadro, e indica **quién puede participar**.',
@@ -225,6 +246,13 @@ export const RULES: Record<Locale, RulesDoc> = {
         'Se manchi una scadenza, perdi **a tavolino**. Le battle Casual non toccano rating né punti.',
         'I **badge** arrivano da soli: prima battle, serie di vittorie, sorprese, podi nei tornei e altro. Il più raro compare accanto al tuo nome.',
       ] },
+      { id: 'tagteam', icon: '👥', title: 'Tag Team (2v2)', text: [
+        'Un **Tag Team fisso** ha nome, pagina, rating e classifica propri: crealo in [Tag Team](/teams) e il tuo partner accetta. Puoi essere in fino a 3.',
+        'In **Crea una battle → Tag Team 2v2** scegli il tuo Tag Team o un **duo casual** (l’@ del partner, o un **posto libero** per chiunque), e sfida un Tag Team o pubblica una sfida aperta. La battle parte quando tutti e quattro i posti sono occupati.',
+        '**Battle registrate:** uno di voi registra la prima parte; l’altro mette le cuffie e **registra sopra**. Il sito compensa il ritardo del dispositivo, fa ascoltare il mix e regolare l’incastro; il mix è il round del duo.',
+        '**Sul palco:** nel round del duo i due microfoni sono aperti. Ognuno registra il proprio microfono in qualità piena e il sito unisce le due registrazioni per il replay. Per parti fatte esattamente insieme, stare nello stesso posto funziona meglio.',
+        'I risultati muovono il rating dei quattro membri e dei Tag Team fissi. Negli eventi, le categorie Tag Team accettano solo Tag Team fissi, ed entrambi i membri ricevono i punti interi del torneo.',
+      ] },
       { id: 'events', icon: '🎪', title: 'Eventi e tornei', text: [
         'Chiunque può [creare un evento](/events/new): logo, nome, edizione, date, descrizione e un **programma** mostrato nell’orario locale di ogni visitatore.',
         'Ogni evento ha una o più **categorie** (Open, Junior, Tag team…). Ogni categoria ha iscrizioni, giudici e tabellone propri, e indica **chi può partecipare**.',
@@ -286,6 +314,13 @@ export const RULES: Record<Locale, RulesDoc> = {
         'Les battles rapportent aussi des **points au classement** de la semaine, de la saison et de tous les temps. Les valeurs exactes sont sur la [page du classement](/ranking).',
         'Si tu rates un délai, tu perds **par forfait**. Les battles Casual ne touchent ni au rating ni aux points.',
         'Les **badges** arrivent tout seuls : première battle, séries de victoires, surprises, podiums en tournoi et plus. Le plus rare s’affiche à côté de ton nom.',
+      ] },
+      { id: 'tagteam', icon: '👥', title: 'Tag Team (2v2)', text: [
+        'Un **Tag Team fixe** a son nom, sa page, son rating et son classement : crée-le dans [Tag Teams](/teams) et ton binôme accepte. Tu peux être dans 3 au maximum.',
+        'Dans **Lancer une battle → Tag Team 2v2**, choisis ton Tag Team ou un **duo casual** (le @ de ton binôme, ou une **place libre** pour n’importe qui), puis défie un Tag Team ou publie un défi ouvert. La battle démarre quand les quatre places sont prises.',
+        '**Battles enregistrées :** l’un de vous enregistre la première partie ; l’autre met son casque et **enregistre par-dessus**. Le site compense la latence de l’appareil, permet d’écouter le mix et de régler le calage ; le mix est le round du duo.',
+        '**Sur scène :** pendant le round du duo, vos deux micros sont ouverts. Chacun enregistre son propre micro en pleine qualité et le site assemble les deux pour le replay. Pour des parties faites exactement ensemble, être au même endroit marche mieux.',
+        'Les résultats font bouger le rating des quatre membres et des Tag Teams fixes. En événement, les catégories Tag Team n’acceptent que des Tag Teams fixes, et les deux membres reçoivent tous les points du tournoi.',
       ] },
       { id: 'events', icon: '🎪', title: 'Événements et tournois', text: [
         'Tout le monde peut [créer un événement](/events/new) : logo, nom, édition, dates, description et un **programme** affiché à l’heure locale de chaque visiteur.',

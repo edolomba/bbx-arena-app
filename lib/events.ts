@@ -23,3 +23,14 @@ export function dateRange(startIso: string, endIso: string, tag: string) {
   const sameYear = a.getFullYear() === b.getFullYear();
   return `${day(a, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' })} – ${day(b, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
+
+/** How an entrant is shown: a Tag Team by its name, a beatboxer as @handle. */
+export const entryLabel = (e: { team?: { name: string } | null; profile?: { username: string } | null } | undefined) =>
+  e?.team?.name ?? `@${e?.profile?.username ?? 'beatboxer'}`;
+
+/** The people performing for an entry: the entrant, plus the partner in Tag Team categories. */
+export const entryMembers = (entries: { profile_id: string; partner_id?: string | null }[], id: string | null | undefined) => {
+  if (!id) return [] as string[];
+  const x = entries.find((e) => e.profile_id === id);
+  return x?.partner_id ? [id, x.partner_id] : [id];
+};

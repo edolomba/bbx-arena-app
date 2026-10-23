@@ -241,6 +241,7 @@ export interface EventRow {
   id: string;
   host_id: string;
   title: string;
+  kind?: 'solo' | 'tag';
   description: string | null;
   format: 'gbb' | 'seven_to_smoke';
   status: EventStatus;
@@ -276,6 +277,10 @@ export interface EventEntry {
   elim_place: number | null;
   elim_score: number | null;
   profile: { username: string; country: string | null; elo_rating: number } | null;
+  team_id?: string | null;
+  partner_id?: string | null;
+  team?: { id: string; name: string } | null;
+  partner?: { username: string } | null;
 }
 
 export interface EventShowcase {
