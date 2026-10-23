@@ -127,9 +127,9 @@ export function SiteCard() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 34 }}>
         <img src={LOGO_PNG} width={Math.round(170 * LOGO_RATIO)} height={170} alt="" />
         <div style={{ display: 'flex', fontSize: 52, fontWeight: 800, letterSpacing: -1 }}>
-          1v1 beatbox battles.<span style={{ color: C.gold, marginLeft: 16 }}>Every sound intact.</span>
+          Beatbox battles, 1v1 and 2v2.<span style={{ color: C.gold, marginLeft: 16 }}>Every sound intact.</span>
         </div>
-        <div style={{ display: 'flex', fontSize: 28, color: C.muted }}>Battle anyone, anywhere · Live stages · Tournaments · Rankings</div>
+        <div style={{ display: 'flex', fontSize: 28, color: C.muted }}>Solo & Tag Team · Live stages · Tournaments · Rankings</div>
       </div>
     </Frame>
   );
